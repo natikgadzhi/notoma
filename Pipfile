@@ -1,0 +1,17 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+nbdev = "*"
+jupyter = "*"
+jupyter_contrib_nbextensions = "*"
+
+[packages]
+notion = "*"
+python-dotenv = "*"
+click = "*"
+
+[requires]
+python_version = "3.7"
