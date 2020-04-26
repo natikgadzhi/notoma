@@ -3,15 +3,30 @@
 __all__ = ['build_docs', 'build', 'cli']
 
 # Cell
+
 import click
+from pathlib import Path
 from nbdev.export import notebook2script
-from nbdev.export2html import notebook2html
+from nbdev.export2html import convert_md
+from nbdev.imports import parallel, Config
+
 
 # Cell
 @click.command()
 def build_docs():
     """Build documentation as a bunch of .md files in ./docs/"""
-    notebook2html()
+
+    nbs = [f for f in Config().nbs_path.glob('*.ipynb') if not f.name.startswith('_')]
+    #docs = [ Path(f"{Config().doc_path}/{nb}").stem + '.md' for nb in nbs]
+
+    dest = Config().doc_path
+
+    for fname in nbs:
+        print(f"Converting {fname}")
+        convert_md(fname, dest)
+
+
+    # notebook2html(cls=MarkdownExporter, template_file='markdown.tpl', force_all=True)
 
 # Cell
 @click.command()

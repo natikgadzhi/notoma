@@ -3,14 +3,14 @@ SRC = $(wildcard ./*.ipynb)
 all: notoma docs
 
 notoma: $(SRC)
-	nbdev_build_lib
+	pipenv run notoma-dev build
 	touch notoma
 
 docs_serve: docs
 	cd docs && bundle exec jekyll serve
 
 docs: $(SRC)
-	nbdev_build_docs
+	pipenv run notoma-dev build-docs
 	touch docs
 
 test:

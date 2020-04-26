@@ -1,0 +1,23 @@
+../
+notoma/
+| .git/
+| .github/
+| .ipynb_checkpoints/
+| docs/
+| notebooks/
+| notoma.egg-info/
+| notoma/
+| | templates/
+| | | jekyll-md.tpl
+| | core.py
+| | scripts.py
+| .env
+| .env.sample
+| .gitignore
+| LICENSE
+| MANIFEST.in
+| Makefile
+| Pipfile
+| Pipfile.lock
+| README.md
+| setup.py
