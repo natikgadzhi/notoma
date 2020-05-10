@@ -6,6 +6,7 @@ verify_ssl = true
 [dev-packages]
 jupyter = "*"
 jupyter_contrib_nbextensions = "*"
+flake8 = "*"
 
 [packages]
 notion = "*"
