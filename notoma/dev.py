@@ -38,7 +38,7 @@ def _convert_nb_to_md(fname: Union[str, Path],
     #       - Drop cells with metadata from the exported docs
     #       - See if I can get show_doc to work in my nbs
     #       - Preprocess any links / backtricks with links to source
-    converted = exporter.from_filename(str(fname), resources={"meta":metadata})
+    converted = exporter.from_filename(str(fname), resources={"meta": metadata})
 
     with open(str(dest), "w") as f:
         f.write(converted[0])

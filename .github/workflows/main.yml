@@ -11,7 +11,9 @@ jobs:
         architecture: 'x64'
 
     - name: Install the library
-      run: make install-deps
+      run: |
+        pip install pipenv
+        make install-deps
 
     # TODO: If some of the notebooks wuould want the token to
     # test how things actually work, one solution would be
