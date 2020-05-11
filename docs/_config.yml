@@ -1,17 +1,18 @@
 host: localhost
 port: 4000
-baseurl: /notoma/
+baseurl: /notoma
 
-ga_tracking: 
+# TODO: Add Google Analytics beacon
+ga_tracking:
 
 exclude:
   - .idea/
   - .gitignore
   - vendor
 
-# remote_theme: pmarsceill/just-the-docs
+remote_theme: pmarsceill/just-the-docs
 theme: "just-the-docs"
- 
+
 highlighter: rouge
 markdown: kramdown
 kramdown:

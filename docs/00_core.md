@@ -1,12 +1,32 @@
 ---
-title: Notoma
-
-
-
-summary: "Write articles for any static gen blog, in Notion."
-description: "Write articles for any static gen blog, in Notion."
+test: value
 ---
 
+<div class="codecell" markdown="1">
+<div class="input_area" markdown="1">
+
+```python
+# default_exp core
+```
+
+</div>
+
+</div>
+
+# Notoma
+
+> Write articles for any static gen blog, in Notion.
+<div class="codecell" markdown="1">
+<div class="input_area" markdown="1">
+
+```python
+#hide
+from nbdev.showdoc import *
+```
+
+</div>
+
+</div>
 
 Notoma is a small tool that works with your Notion database and allows you to turn your Notion pages into a blog, or a website — with any static gen website engine and hosting platform you want.
 
@@ -121,7 +141,8 @@ config = Config()
 Provides a thin wrapper around `notion-py` — an API wrapper library for the reverse-engineered Notion API. Pagify users that client to grab the blog contents from Notion.
 
 The client utilizes authentication token from Notion's web version, `token_v2`, that you can grab from your browers cookies. 
-> Notice:This token authorizes any code to do anything that you can do in the browser in Notion on your behalf, so don't share it publicly, and don't store it your code or git.
+
+> Notice: This token authorizes any code to do anything that you can do in the browser in Notion on your behalf, so don't share it publicly, and don't store it your code or git.
 <div class="codecell" markdown="1">
 <div class="input_area" markdown="1">
 
@@ -393,6 +414,16 @@ def notion2md(token_v2:str, database_url:str, dest:Union[str, Path]) -> None:
 
     for post in database.get_rows():
         page2path(page, dest_dir=dest).write_text(page2md(page))
+```
+
+</div>
+
+</div>
+<div class="codecell" markdown="1">
+<div class="input_area" markdown="1">
+
+```python
+
 ```
 
 </div>

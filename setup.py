@@ -1,11 +1,15 @@
-from setuptools import setup, find_packages
 import os
+from setuptools import setup, find_packages
+from notoma.version import version as notoma_version
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-VERSION = "0.0.1.dev0"
 
 
 def get_requirements(env):
+    """
+    Takes requirements from requirements.txt.
+    The detault (produciton) environment is "base"
+    """
     with open(f"requirements-{env}.txt") as fp:
         reqs = list()
         for lib in fp.read().split("\n"):
@@ -13,12 +17,13 @@ def get_requirements(env):
                 reqs.append(lib.strip())
         return reqs
 
+
 install_requires = get_requirements("base")
 dev_requires = get_requirements("dev")
 
 setup(
     name="Notoma",
-    version=VERSION,
+    version=notoma_version,
     author="Nate Gadzhibalaev",
     author_email="nate@respawn.io",
     url="https://github.com/xnutsive/notoma/",
@@ -29,8 +34,8 @@ setup(
     install_requires=install_requires,
     extras_require={"dev": dev_requires},
     license="Apache Software License 2.0",
-    entry_points = { 'console_scripts': 
-        ["notoma-dev = notoma.scripts:cli"] },
+    entry_points={'console_scripts':
+                  ["notoma-dev = notoma.dev:cli"]},
     include_package_data=True,
     packages=find_packages()
 )

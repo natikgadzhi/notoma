@@ -1,7 +1,11 @@
-{%- extends 'markdown.tpl' -%}{% block body %}---
-{%- for k, v in resources.items() -%}
-{% k %}: {% v %}
-{%- end -%}
+{%- extends 'markdown.tpl' -%}
+
+
+{% block body %}
+---
+{%- for k, v in resources['meta'].items() %}
+{{ k }}: {{ v }}
+{% endfor -%}
 ---
 
 {{ super() }}

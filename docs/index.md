@@ -1,12 +1,15 @@
 ---
-title: Basic Usage
-
-
-
-summary: "Use Notion to write articles for any blogging platform that works with Markdown. Pagify au\tomatically exports your Notion pages into a bunch of `.md` files, available as a CLI tool, or a Python library."
-description: "Use Notion to write articles for any blogging platform that works with Markdown. Pagify au\tomatically exports your Notion pages into a bunch of `.md` files, available as a CLI tool, or a Python library."
+test: value
 ---
 
+
+# Notoma
+
+> Use Notion to write articles for any blogging platform that works with Markdown. Pagify au\tomatically exports your Notion pages into a bunch of `.md` files, available as a CLI tool, or a Python library.
+
+- layout: default
+- title: Basic Usage
+- key: value
 
 ## Install
 

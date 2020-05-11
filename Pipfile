@@ -3,15 +3,19 @@ name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
+[requires]
+python_version = ">= 3.7"
+
+[packages]
+notion = ">=0.0.25"
+python-dotenv = "*"
+click = ">=7.1.2"
+
 [dev-packages]
 jupyter = "*"
 jupyter_contrib_nbextensions = "*"
-flake8 = "*"
-
-[packages]
-notion = "*"
-python-dotenv = "*"
-click = "*"
-
-[requires]
-python_version = "3.7"
+nbconvert = "*"
+nbexec = "*"
+twine = "*"
+nbdev = "*"
+notoma = { editable = true, path = "." }

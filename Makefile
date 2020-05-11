@@ -1,26 +1,31 @@
-SRC = $(wildcard ./*.ipynb)
-
 all: notoma docs
 
-notoma: $(SRC)
-	pipenv run notoma-dev build
-	touch notoma
+clean-deps:
+	rm -rf requirements-base.txt requirements-dev.txt
 
-docs_serve: docs
+deps: clean-deps
+	pipenv lock -r > requirements-base.txt
+	pipenv lock -rd > requirements-dev.txt
+
+install-deps: deps
+	pipenv install
+	pipenv install --dev
+
+run-docs: docs
 	cd docs && bundle exec jekyll serve
 
-docs: $(SRC)
-	pipenv run notoma-dev build-docs
+
+.PHONY: docs
+docs:
+	pipenv run notoma-dev docs
 	touch docs
 
 test:
-	nbdev_test_nbs
-
-release: pypi
-	nbdev_bump_version
+	make test
+	# pipenv run nbexec ./notebooks/*.ipynb
 
 pypi: dist
-	twine upload --repository pypi dist/*
+	pipenv run twine upload --repository pypi dist/*
 
 dist: clean
 	python setup.py sdist bdist_wheel
