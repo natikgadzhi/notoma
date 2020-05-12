@@ -1,6 +1,7 @@
 ---
-test: value
+layout: default
 ---
+
 
 <div class="codecell" markdown="1">
 <div class="input_area" markdown="1">
@@ -16,17 +17,6 @@ test: value
 # Notoma
 
 > Write articles for any static gen blog, in Notion.
-<div class="codecell" markdown="1">
-<div class="input_area" markdown="1">
-
-```python
-#hide
-from nbdev.showdoc import *
-```
-
-</div>
-
-</div>
 
 Notoma is a small tool that works with your Notion database and allows you to turn your Notion pages into a blog, or a website — with any static gen website engine and hosting platform you want.
 

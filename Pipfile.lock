@@ -1,11 +1,11 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "57687371396f168efbd7781318261323acf2fe73b5de6ebab06ad6025e5865df"
+            "sha256": "445e7f5b7444165d2e7dc37728062cb681d30e0f8398d27f2ead4d26250bc5c4"
         },
         "pipfile-spec": 6,
         "requires": {
-            "python_version": ">= 3.7"
+            "python_version": ">=3.7"
         },
         "sources": [
             {
@@ -151,7 +151,7 @@
                 "sha256:5b26757dc6f79a3b7dc9fab95359328d5747fcb2409d331ea66d0272b90ab2a0",
                 "sha256:8b995ffe925347a2138d7ac0fe77155e4311a0ea6d6da4f5128fe4b3cbe5ed71"
             ],
-            "markers": "platform_system == 'Darwin'",
+            "markers": "sys_platform == 'darwin'",
             "version": "==0.1.0"
         },
         "attrs": {
@@ -465,6 +465,7 @@
                 "sha256:049af048ed76b95c3c44043620c17e56bc001329e07f83fec4f177f0e3d7b757",
                 "sha256:276343c78a9660ab2a63c28cc33da5f7c58c092b3f3a40b6017ae2ce6689320d"
             ],
+            "index": "pypi",
             "version": "==5.0.6"
         },
         "notebook": {

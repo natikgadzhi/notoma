@@ -4,7 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [requires]
-python_version = ">= 3.7"
+python_version = ">=3.7"
 
 [packages]
 notion = ">=0.0.25"
@@ -15,7 +15,9 @@ click = ">=7.1.2"
 jupyter = "*"
 jupyter_contrib_nbextensions = "*"
 nbconvert = "*"
+nbformat = "*"
 nbexec = "*"
 twine = "*"
 nbdev = "*"
+
 notoma = { editable = true, path = "." }

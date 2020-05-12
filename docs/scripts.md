@@ -1,6 +1,7 @@
 ---
-test: value
+layout: default
 ---
+
 
 <div class="codecell" markdown="1">
 <div class="input_area" markdown="1">

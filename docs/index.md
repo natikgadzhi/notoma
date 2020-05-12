@@ -1,6 +1,7 @@
 ---
-test: value
+layout: default
 ---
+
 
 
 # Notoma

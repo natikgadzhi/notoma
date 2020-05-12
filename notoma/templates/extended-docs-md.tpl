@@ -2,11 +2,14 @@
 
 
 {% block body %}
+
+{% if resources['meta'] | length > 0 %}
 ---
 {%- for k, v in resources['meta'].items() %}
 {{ k }}: {{ v }}
 {% endfor -%}
 ---
+{% endif %}
 
 {{ super() }}
 {%- endblock body %}

@@ -2,7 +2,8 @@ from pathlib import Path
 from typing import Union
 import click
 from nbconvert.exporters import MarkdownExporter
-from nbdev.export2html import execute_nb
+from nbconvert.preprocessors import RegexRemovePreprocessor
+from nbdev.export import read_nb
 
 
 NBS_PATH = (Path(__file__).parent/"../notebooks/")
@@ -16,30 +17,49 @@ def cli(): pass
 
 @cli.command()
 def docs():
-    """Build documentation as a bunch of .md files in ./docs/"""
+    """
+    Build documentation as a bunch of .md files in ./docs/, and the README.md
+    """
     nbs = [f for f in NBS_PATH.glob("*.ipynb")]
 
     for fname in nbs:
-        fname = Path(fname)
-        dest = Path(f"{DOCS_PATH/fname.stem}.md")
+        fname = Path(fname).absolute()
+        dest = Path(f"{DOCS_PATH/fname.stem}.md").absolute()
         print(f"Converting {fname} to {dest}")
         _convert_nb_to_md(fname, dest)
 
 
+def _get_metadata(notebook: list) -> dict:
+    "Find the cell with title and summary in `cells`."
+
+    if not notebook["cells"]:
+        raise ValueError("Expected the input to be NotebookCell-like list")
+
+    markdown_cells = [cell['source'] for cell in notebook['cells']
+                      if cell['cell_type'] == 'markdown']
+
+    meta = dict(layout='default')
+
+    for cell in markdown_cells:
+        if cell.startswith("%METADATA%"):
+            for line in cell.split("\n")[1:]:
+                k, v, *rest = [part.strip().lower() for part in line.slit(":")]
+                meta[k] = v
+    return meta
+
+
 def _convert_nb_to_md(fname: Union[str, Path],
                       dest: Union[str, Path] = DOCS_PATH) -> None:
-
-    # TODO: Fetch the metadata from the notebook
-    metadata = dict(test="value")
+    notebook = read_nb(str(fname))
+    metadata = _get_metadata(notebook)
     exporter = _build_exporter()
 
-    # TODO: Preprocess cells:
-    #       - Execute the notebook to make sure it works correctly
-    #       - Drop cells with metadata from the exported docs
-    #       - See if I can get show_doc to work in my nbs
-    #       - Preprocess any links / backtricks with links to source
-    converted = exporter.from_filename(str(fname), resources={"meta": metadata})
+    prep = RegexRemovePreprocessor()
+    prep.patterns = ["![\s\S]", "$%METADATA%", "^#hide"]
+    notebook, _ = prep.preprocess(notebook, {})
 
+    converted = exporter.from_notebook_node(notebook,
+                                            resources={"meta": metadata})
     with open(str(dest), "w") as f:
         f.write(converted[0])
 
