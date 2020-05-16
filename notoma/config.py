@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv, find_dotenv
 
+
 class Config:
     """
     Wraps Notoma's settings in an object with easier access.
@@ -20,22 +21,24 @@ class Config:
          environment config values.
         """
         load_dotenv(find_dotenv())
-        self.__config = {'token_v2': os.environ.get('NOTOMA_NOTION_TOKEN_V2'),
-                         'blog_url': os.environ.get('NOTOMA_NOTION_BLOG_URL')}
+        self.__config = {
+            "token_v2": os.environ.get("NOTOMA_NOTION_TOKEN_V2"),
+            "blog_url": os.environ.get("NOTOMA_NOTION_BLOG_URL"),
+        }
 
         for k, v in kwargs.items():
             self.__config[k] = v
 
     @property
     def token_v2(self):
-        return self.__config['token_v2']
+        return self.__config["token_v2"]
 
     @property
     def blog_url(self):
-        return self.__config['blog_url']
+        return self.__config["blog_url"]
 
     def __getitem__(self, key):
         return self.__config[key]
 
     def __repr__(self):
-        return '\n'.join(f'{k}: {v}' for k, v in self.__config.items())
+        return "\n".join(f"{k}: {v}" for k, v in self.__config.items())

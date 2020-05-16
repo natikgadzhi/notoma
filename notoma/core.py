@@ -6,8 +6,6 @@ from notion.client import NotionClient
 from notion.collection import Collection
 from notion.block import *
 
-from notion.markdown import notion_to_markdown
-
 from .config import Config
 
 
@@ -23,7 +21,7 @@ def notion_blog_database(client: NotionClient, db_url: str) -> Collection:
     return client.get_collection_view(db_url).collection
 
 
-def block2md(block: Block, counter:int = 1) -> str:
+def block2md(block: Block, counter: int = 1) -> str:
     """Transforms a Notion Block into a Markdown string."""
 
     if isinstance(block, TextBlock):
@@ -83,13 +81,18 @@ def page2md(page: PageBlock) -> str:
 
 def page2path(page: PageBlock, dest_dir: Path = Path(".")) -> Path:
     """Build a .md file path in `dest_dir` based on a Notion page metadata."""
-    return dest_dir/Path("-".join(page.title.lower().replace(".", "").split(" "))+ ".md")
+    fname = "-".join(page.title.lower().replace(".", "").split(" ")) + ".md"
+    return dest_dir / fname
 
 
 def page_front_matter(page: PageBlock) -> str:
     """Builds a page front matter in a yaml-like format."""
-    internals = ['published', 'title']
-    renderables = { k:v for k,v in page.get_all_properties().items() if k not in internals }
+    internals = ["published", "title"]
+    renderables = {
+        k: v
+        for k, v in page.get_all_properties().items()
+        if k not in internals
+    }
 
     return f"""
 ---
@@ -98,7 +101,9 @@ def page_front_matter(page: PageBlock) -> str:
 """
 
 
-def notion2md(token_v2: str, database_url: str, dest: Union[str, Path]) -> None:
+def notion2md(
+    token_v2: str, database_url: str, dest: Union[str, Path]
+) -> None:
     """
     Grab Notion Blog database using auth token `token_v2`,
      convert posts in database `database_url` to Markdown,

@@ -12,12 +12,23 @@ python-dotenv = "*"
 click = ">=7.1.2"
 
 [dev-packages]
+# Linters
+pre-commit = "*"
+black = "*"
+flake8 = "*"
+
+# Jupyter is used to create docs and interactive examples
 jupyter = "*"
 jupyter_contrib_nbextensions = "*"
 nbconvert = "*"
 nbformat = "*"
 nbexec = "*"
-twine = "*"
 nbdev = "*"
+twine = "*"
 
-notoma = { editable = true, path = "." }
+# Install Notoma itself as editable install to be able to
+# import itself in the notebooks
+notoma = {editable = true,path = "."}
+
+[pipenv]
+allow_prereleases = true

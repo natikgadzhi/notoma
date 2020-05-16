@@ -6,13 +6,14 @@ from nbconvert.preprocessors import RegexRemovePreprocessor
 from nbdev.export import read_nb
 
 
-NBS_PATH = (Path(__file__).parent/"../notebooks/")
-DOCS_PATH = (Path(__file__).parent/"../docs/")
-TPL_FILE = str(Path(__file__).parent/"templates/extended-docs-md.tpl")
+NBS_PATH = Path(__file__).parent / "../notebooks/"
+DOCS_PATH = Path(__file__).parent / "../docs/"
+TPL_FILE = str(Path(__file__).parent / "templates/extended-docs-md.tpl")
 
 
 @click.group()
-def cli(): pass
+def cli():
+    pass
 
 
 @cli.command()
@@ -35,10 +36,13 @@ def _get_metadata(notebook: list) -> dict:
     if not notebook["cells"]:
         raise ValueError("Expected the input to be NotebookCell-like list")
 
-    markdown_cells = [cell['source'] for cell in notebook['cells']
-                      if cell['cell_type'] == 'markdown']
+    markdown_cells = [
+        cell["source"]
+        for cell in notebook["cells"]
+        if cell["cell_type"] == "markdown"
+    ]
 
-    meta = dict(layout='default')
+    meta = dict(layout="default")
 
     for cell in markdown_cells:
         if cell.startswith("%METADATA%"):
@@ -48,18 +52,20 @@ def _get_metadata(notebook: list) -> dict:
     return meta
 
 
-def _convert_nb_to_md(fname: Union[str, Path],
-                      dest: Union[str, Path] = DOCS_PATH) -> None:
+def _convert_nb_to_md(
+    fname: Union[str, Path], dest: Union[str, Path] = DOCS_PATH
+) -> None:
     notebook = read_nb(str(fname))
     metadata = _get_metadata(notebook)
     exporter = _build_exporter()
 
     prep = RegexRemovePreprocessor()
-    prep.patterns = ["![\s\S]", "$%METADATA%", "^#hide"]
+    prep.patterns = [r"![\s\S]", "$%METADATA%", "^#hide"]
     notebook, _ = prep.preprocess(notebook, {})
 
-    converted = exporter.from_notebook_node(notebook,
-                                            resources={"meta": metadata})
+    converted = exporter.from_notebook_node(
+        notebook, resources={"meta": metadata}
+    )
     with open(str(dest), "w") as f:
         f.write(converted[0])
 
@@ -72,4 +78,4 @@ def _build_exporter() -> MarkdownExporter:
 
 
 def _make_readme(fname: Union[str, Path]):
-    _convert_nb_to_md(fname, fname.parent.parent/"README.md")
+    _convert_nb_to_md(fname, fname.parent.parent / "README.md")
