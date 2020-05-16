@@ -17,4 +17,5 @@ jobs:
 
     - name: Lint the code
       run: |
-        pipenv run pre-commit
+        pipenv run flake8
+        pipenv run black .
