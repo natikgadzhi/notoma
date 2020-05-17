@@ -9,7 +9,6 @@ from nbdev.export import read_nb
 ROOT_PATH = Path(__file__).parent.parent
 NBS_PATH = ROOT_PATH / "notebooks/"
 DOCS_PATH = ROOT_PATH / "docs/"
-TPL_FILE = str(ROOT_PATH / "notoma/templates/extended-docs-md.tpl")
 
 
 @click.group(help="Notoma dev tools: tests and documentation generators.")
@@ -38,7 +37,7 @@ def _get_metadata(notebook: list) -> dict:
     for cell in md_cells:
         if cell.startswith("%METADATA%"):
             for line in cell.split("\n")[1:]:
-                k, v, *rest = [part.strip().lower() for part in line.slit(":")]
+                k, v, *rest = [part.strip().lower() for part in line.split(":")]
                 meta[k] = v
     return meta
 
@@ -55,7 +54,7 @@ def _convert_nb_to_md(
     exporter = _build_exporter()
 
     prep = RegexRemovePreprocessor()
-    prep.patterns = [r"![\s\S]", "$%METADATA%", "^#hide"]
+    prep.patterns = [r"![\s\S]", "^%METADATA%", "^#hide"]
     notebook, _ = prep.preprocess(notebook, {})
 
     converted = exporter.from_notebook_node(notebook, resources={"meta": metadata})
@@ -64,7 +63,9 @@ def _convert_nb_to_md(
 
 
 def _build_exporter() -> MarkdownExporter:
-    exporter = MarkdownExporter(template_file=TPL_FILE)
+    exporter = MarkdownExporter()
+    exporter.template_file = "extended-docs-md.tpl"
+    exporter.template_path.append(str(Path(__file__).parent / "templates"))
     exporter.exclude_input_prompt = True
     exporter.exclude_output_prompt = True
     return exporter

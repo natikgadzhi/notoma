@@ -1,5 +1,4 @@
-{%- extends 'markdown.tpl' -%}
-
+{%- extends 'index.md.j2' -%}
 
 {% block body %}
 

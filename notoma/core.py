@@ -65,6 +65,8 @@ def page2md(page: PageBlock) -> str:
     """Translates a Notion Page (`PageBlock`) into a Markdown string."""
     blocks = list()
 
+    # TODO: Move this to a jinja template.
+
     # Numbered lists iterator
     counter = 1
 
@@ -90,6 +92,11 @@ def page_front_matter(page: PageBlock) -> str:
     internals = ["published", "title"]
     all_props = page.get_all_properties()
     renderables = {k: v for k, v in all_props.items() if k not in internals}
+
+    # TODO:
+    # This needs a way to process bool values and dates
+    # And do other sanity checks.
+
     return f"---\n{yaml.dump(renderables)}---\n"
 
 
