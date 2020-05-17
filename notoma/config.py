@@ -4,13 +4,13 @@ from dotenv import load_dotenv, find_dotenv
 
 class Config:
     """
-    Wraps Notoma's settings in an object with easier access.
-    Settings are loaded from `.env` file, and from the system environment.
-    You can override them by providing kwargs when creating an
-     instance of a config.
+    Wraps Notoma's settings in an object.
+    Settings are automatically loaded from ENV (and `.env` file), and you
+    can override them with `kwargs`.
 
-    `.env` keys are explicit and long, i.e. `NOTOMA_NOTION_TOKEN_V2`.
-    `kwargs` key responsible for the token is just `token_v2`.
+        - `token_v2`: str, Notion authentication token. Environment variable
+            `NOTOMA_NOTION_TOKEN_V2`.
+        - `blog_url`: str, Notion Blog URL. `NOTOMA_NOTION_BLOG_URL`.
     """
 
     def __init__(self, **kwargs):
@@ -26,8 +26,9 @@ class Config:
             "blog_url": os.environ.get("NOTOMA_NOTION_BLOG_URL"),
         }
 
-        for k, v in kwargs.items():
-            self.__config[k] = v
+        for key, value in kwargs.items():
+            if value is not None:
+                self.__config[key] = value
 
     @property
     def token_v2(self):

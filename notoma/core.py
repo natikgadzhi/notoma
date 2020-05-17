@@ -88,22 +88,12 @@ def page2path(page: PageBlock, dest_dir: Path = Path(".")) -> Path:
 def page_front_matter(page: PageBlock) -> str:
     """Builds a page front matter in a yaml-like format."""
     internals = ["published", "title"]
-    renderables = {
-        k: v
-        for k, v in page.get_all_properties().items()
-        if k not in internals
-    }
-
-    return f"""
----
-{yaml.dump(renderables)}
----\n
-"""
+    all_props = page.get_all_properties()
+    renderables = {k: v for k, v in all_props.items() if k not in internals}
+    return f"---\n{yaml.dump(renderables)}---\n"
 
 
-def notion2md(
-    token_v2: str, database_url: str, dest: Union[str, Path]
-) -> None:
+def notion2md(token_v2: str, database_url: str, dest: Union[str, Path]) -> None:
     """
     Grab Notion Blog database using auth token `token_v2`,
      convert posts in database `database_url` to Markdown,

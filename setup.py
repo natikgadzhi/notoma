@@ -1,6 +1,6 @@
 import os
 from setuptools import setup, find_packages
-from notoma.version import version as notoma_version
+from notoma.version import __version__ as notoma_version
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 

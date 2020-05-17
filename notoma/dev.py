@@ -6,21 +6,19 @@ from nbconvert.preprocessors import RegexRemovePreprocessor
 from nbdev.export import read_nb
 
 
-NBS_PATH = Path(__file__).parent / "../notebooks/"
-DOCS_PATH = Path(__file__).parent / "../docs/"
-TPL_FILE = str(Path(__file__).parent / "templates/extended-docs-md.tpl")
+ROOT_PATH = Path(__file__).parent.parent
+NBS_PATH = ROOT_PATH / "notebooks/"
+DOCS_PATH = ROOT_PATH / "docs/"
+TPL_FILE = str(ROOT_PATH / "notoma/templates/extended-docs-md.tpl")
 
 
-@click.group()
+@click.group(help="Notoma dev tools: tests and documentation generators.")
 def cli():
     pass
 
 
-@cli.command()
+@cli.command(help="Generate documentation pages in `docs` from `notebooks`.")
 def docs():
-    """
-    Build documentation as a bunch of .md files in ./docs/, and the README.md
-    """
     nbs = [f for f in NBS_PATH.glob("*.ipynb")]
 
     for fname in nbs:
@@ -31,20 +29,13 @@ def docs():
 
 
 def _get_metadata(notebook: list) -> dict:
-    "Find the cell with title and summary in `cells`."
-
     if not notebook["cells"]:
         raise ValueError("Expected the input to be NotebookCell-like list")
 
-    markdown_cells = [
-        cell["source"]
-        for cell in notebook["cells"]
-        if cell["cell_type"] == "markdown"
-    ]
+    md_cells = [c["source"] for c in notebook["cells"] if c["cell_type"] == "markdown"]
+    meta = {"layout": "default"}
 
-    meta = dict(layout="default")
-
-    for cell in markdown_cells:
+    for cell in md_cells:
         if cell.startswith("%METADATA%"):
             for line in cell.split("\n")[1:]:
                 k, v, *rest = [part.strip().lower() for part in line.slit(":")]
@@ -55,6 +46,10 @@ def _get_metadata(notebook: list) -> dict:
 def _convert_nb_to_md(
     fname: Union[str, Path], dest: Union[str, Path] = DOCS_PATH
 ) -> None:
+    """
+    Converts a Jupyter Notebook in `fname` to a Jekyll-compatible Markdown file
+    including front matter metadata for Just The Docs.
+    """
     notebook = read_nb(str(fname))
     metadata = _get_metadata(notebook)
     exporter = _build_exporter()
@@ -63,9 +58,7 @@ def _convert_nb_to_md(
     prep.patterns = [r"![\s\S]", "$%METADATA%", "^#hide"]
     notebook, _ = prep.preprocess(notebook, {})
 
-    converted = exporter.from_notebook_node(
-        notebook, resources={"meta": metadata}
-    )
+    converted = exporter.from_notebook_node(notebook, resources={"meta": metadata})
     with open(str(dest), "w") as f:
         f.write(converted[0])
 
@@ -78,4 +71,7 @@ def _build_exporter() -> MarkdownExporter:
 
 
 def _make_readme(fname: Union[str, Path]):
-    _convert_nb_to_md(fname, fname.parent.parent / "README.md")
+    """
+    Converts a notebook at `fname` to README.md in repository root.
+    """
+    _convert_nb_to_md(fname, ROOT_PATH / "README.md")
