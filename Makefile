@@ -14,6 +14,8 @@ install-deps: deps
 run-docs: docs
 	cd docs && bundle exec jekyll serve
 
+contrib: install-deps
+	pipenv run pre-commit install
 
 .PHONY: docs
 docs:

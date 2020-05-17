@@ -35,7 +35,12 @@ setup(
     install_requires=install_requires,
     extras_require={"dev": dev_requires},
     license="Apache Software License 2.0",
-    entry_points={"console_scripts": ["notoma-dev = notoma.dev:cli"]},
+    entry_points={
+        "console_scripts": [
+            "notoma-dev = notoma.dev:cli",
+            "notoma = notoma.cli:runner",
+        ]
+    },
     include_package_data=True,
     packages=find_packages(),
 )
