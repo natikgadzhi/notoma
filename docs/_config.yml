@@ -2,6 +2,17 @@ host: localhost
 port: 4000
 baseurl: /notoma
 
+# Aux links for the upper right navigation
+aux_links:
+  "Notoma on Gibhub":
+    - "//github.com/xnutsive/notoma"
+
+# Footer content appears at the bottom of every page's main content
+footer_content: |
+  Copyright &copy; 2020 Nate Gadzibalaev. Distributed by an <a href=\"https://github.com/pmarsceill/just-the-docs/tree/master/LICENSE.txt\">Apache 2 license.</a>"
+
+
+
 # TODO: Add Google Analytics beacon
 ga_tracking:
 

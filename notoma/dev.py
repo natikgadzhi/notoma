@@ -37,8 +37,8 @@ def _get_metadata(notebook: list) -> dict:
     for cell in md_cells:
         if cell.startswith("%METADATA%"):
             for line in cell.split("\n")[1:]:
-                k, v, *rest = [part.strip().lower() for part in line.split(":")]
-                meta[k] = v
+                k, v, *rest = [part.strip() for part in line.split(":")]
+                meta[k.lower()] = v
     return meta
 
 
