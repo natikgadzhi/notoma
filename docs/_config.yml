@@ -14,7 +14,7 @@ footer_content: |
 
 
 # TODO: Add Google Analytics beacon
-ga_tracking:
+ga_tracking: UA-17294800-4
 
 exclude:
   - .idea/
