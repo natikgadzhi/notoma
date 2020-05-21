@@ -23,7 +23,6 @@ jupyter_contrib_nbextensions = "*"
 nbconvert = "*"
 nbformat = "*"
 nbexec = "*"
-nbdev = "*"
 twine = "*"
 
 # Install Notoma itself as editable install to be able to

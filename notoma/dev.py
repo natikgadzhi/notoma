@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Union
 import click
+import nbformat
 from nbconvert.exporters import MarkdownExporter
 from nbconvert.preprocessors import RegexRemovePreprocessor
-from nbdev.export import read_nb
 
 
 ROOT_PATH = Path(__file__).parent.parent
@@ -13,6 +13,10 @@ DOCS_PATH = ROOT_PATH / "docs/"
 
 @click.group(help="Notoma dev tools: tests and documentation generators.")
 def cli():
+    """
+    The CLI group method wrapped in @click.group
+    to invoke the dev commands.
+    """
     pass
 
 
@@ -49,7 +53,7 @@ def _convert_nb_to_md(
     Converts a Jupyter Notebook in `fname` to a Jekyll-compatible Markdown file
     including front matter metadata for Just The Docs.
     """
-    notebook = read_nb(str(fname))
+    notebook = nbformat.read(str(fname), as_version=4)
     metadata = _get_metadata(notebook)
     exporter = _build_exporter()
 
@@ -63,6 +67,10 @@ def _convert_nb_to_md(
 
 
 def _build_exporter() -> MarkdownExporter:
+    """
+    Build a MarkdownExporter with a custom template
+    and return it.
+    """
     exporter = MarkdownExporter()
     exporter.template_file = "extended-docs-md.tpl"
     exporter.template_path.append(str(Path(__file__).parent / "templates"))
