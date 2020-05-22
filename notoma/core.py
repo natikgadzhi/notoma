@@ -7,6 +7,7 @@ from notion.collection import Collection
 from notion.block import *
 
 from .config import Config
+from .templates import template
 
 
 def notion_client(token_v2: str) -> NotionClient:
@@ -21,64 +22,11 @@ def notion_blog_database(client: NotionClient, db_url: str) -> Collection:
     return client.get_collection_view(db_url).collection
 
 
-def block2md(block: Block, counter: int = 1) -> str:
-    """Transforms a Notion Block into a Markdown string."""
-
-    if isinstance(block, TextBlock):
-        return block.title
-
-    elif isinstance(block, HeaderBlock):
-        return f"# {block.title}"
-
-    elif isinstance(block, SubheaderBlock):
-        return f"## {block.title}"
-
-    elif isinstance(block, SubsubheaderBlock):
-        return f"### {block.title}"
-
-    elif isinstance(block, QuoteBlock):
-        return f"> {block.title}"
-
-    elif isinstance(block, BulletedListBlock):
-        return f"- {block.title}"
-
-    elif isinstance(block, NumberedListBlock):
-        return f"{counter}. {block.title}"
-
-    elif isinstance(block, CodeBlock):
-        return f"""
-```{block.language}
-{block.title}
-```
-"""
-
-    elif isinstance(block, CalloutBlock):
-        return f"> {block.icon} {block.title}"
-
-    elif isinstance(block, DividerBlock):
-        return "\n"
-    else:
-        return ""
-
-
 def page2md(page: PageBlock) -> str:
     """Translates a Notion Page (`PageBlock`) into a Markdown string."""
-    blocks = list()
-
-    # TODO: Move this to a jinja template.
-
-    # Numbered lists iterator
-    counter = 1
-
-    for block in page.children:
-        blocks.append(block2md(block, counter))
-
-        if isinstance(block, NumberedListBlock):
-            counter += 1
-        else:
-            counter = 1
-
-    return page_front_matter(page) + "\n".join(blocks)
+    return template("post", debug=True).render(
+        page=page, front_matter=front_matter(page)
+    )
 
 
 def page2path(page: PageBlock, dest_dir: Path = Path(".")) -> Path:
@@ -87,7 +35,7 @@ def page2path(page: PageBlock, dest_dir: Path = Path(".")) -> Path:
     return dest_dir / fname
 
 
-def page_front_matter(page: PageBlock) -> str:
+def front_matter(page: PageBlock) -> str:
     """Builds a page front matter in a yaml-like format."""
     internals = ["published", "title"]
     all_props = page.get_all_properties()
@@ -96,15 +44,15 @@ def page_front_matter(page: PageBlock) -> str:
     # TODO:
     # This needs a way to process bool values and dates
     # And do other sanity checks.
-
-    return f"---\n{yaml.dump(renderables)}---\n"
+    # return {k: v for k, v in renderables.items if type(v) in [str, bool, list]}
+    return renderables
 
 
 def notion2md(token_v2: str, database_url: str, dest: Union[str, Path]) -> None:
     """
     Grab Notion Blog database using auth token `token_v2`,
-     convert posts in database `database_url` to Markdown,
-     and save them to `dest`.
+    convert posts in database `database_url` to Markdown,
+    and save them to `dest`.
     """
 
     client = notion_client(token_v2)

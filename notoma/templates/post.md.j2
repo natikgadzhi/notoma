@@ -1,0 +1,14 @@
+---
+{% for k, v in front_matter.items() %}
+{{ k }}: {{ v }}
+{% endfor %}}
+---
+
+{% for block in page.children -%}
+{% set block_template = block | template_name %}
+{% if block_template is not none %}
+    {%- include block_template %}
+{% else %}
+    {{- block | render_block }}
+{% endif %}
+{% endfor %}

@@ -10,13 +10,13 @@ python_version = "3.7"
 notion = ">=0.0.25"
 python-dotenv = "*"
 click = ">=7.1.2"
+jinja2 = "*"
 
 [dev-packages]
 # Linters
 pre-commit = "*"
 black = "*"
 flake8 = "*"
-
 # Jupyter is used to create docs and interactive examples
 jupyter = "*"
 jupyter_contrib_nbextensions = "*"
@@ -24,7 +24,6 @@ nbconvert = "*"
 nbformat = "*"
 nbexec = "*"
 twine = "*"
-
 # Install Notoma itself as editable install to be able to
 # import itself in the notebooks
 notoma = {editable = true,path = "."}

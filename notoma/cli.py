@@ -6,7 +6,6 @@ from .config import Config
 from .core import (
     notion_client,
     notion_blog_database,
-    page_front_matter,
     page2md,
     page2path,
 )
@@ -55,8 +54,6 @@ def convert(
     client = notion_client(config.token_v2)
     blog = notion_blog_database(client, config.blog_url)
 
-    # FIXME accessing get_rows() directly relies on notion api,
-    # use a notoma wrapper instead
     with click.progressbar(blog.get_rows()) as bar:
         for page in bar:
             page2path(page, dest_dir=dest).write_text(page2md(page))
