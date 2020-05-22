@@ -6,8 +6,9 @@ from .config import Config
 from .core import (
     notion_client,
     notion_blog_database,
-    page2md,
-    page2path,
+    page_to_markdown,
+    page_path,
+    published_pages,
 )
 from .version import __version__
 
@@ -54,9 +55,12 @@ def convert(
     client = notion_client(config.token_v2)
     blog = notion_blog_database(client, config.blog_url)
 
-    with click.progressbar(blog.get_rows()) as bar:
+    pages = published_pages(blog)
+
+    with click.progressbar(pages) as bar:
         for page in bar:
-            page2path(page, dest_dir=dest).write_text(page2md(page))
+            page_path(page, dest_dir=dest).write_text(page_to_markdown(page))
+    click.echo(f"Processed {len(pages)} pages.")
 
 
 @runner.command()
