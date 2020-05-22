@@ -9,6 +9,7 @@ from .core import (
     page_to_markdown,
     page_path,
     published_pages,
+    draft_pages,
 )
 from .version import __version__
 
@@ -45,22 +46,44 @@ def version():
     type=click.Path(exists=True),
     help="Directory to put posts into.",
 )
+@click.option(
+    "--drafts",
+    default=None,
+    type=click.Path(exists=True),
+    help="Directory for draft posts. Drafts won't be imported if this is left blank.",
+)
 @click.option("--token_v2", "-t", help="Notion auth token from the cookie.")
 @click.option("--verbose", is_flag=True, default=False, help="Verbose output.")
+@click.option("--debug", is_flag=True, default=False, help="Enable debug output.")
 def convert(
-    dest: str, verbose: bool = False, token_v2: str = None, notion_url: str = None
+    dest: str,
+    drafts: str,
+    debug: bool = False,
+    verbose: bool = False,
+    token_v2: str = None,
+    notion_url: str = None,
 ) -> None:
     config = Config(token_v2=token_v2, blog_url=notion_url)
     dest = Path(dest).absolute()
     client = notion_client(config.token_v2)
     blog = notion_blog_database(client, config.blog_url)
 
-    pages = published_pages(blog)
-
-    with click.progressbar(pages) as bar:
+    published = published_pages(blog)
+    with click.progressbar(published) as bar:
         for page in bar:
             page_path(page, dest_dir=dest).write_text(page_to_markdown(page))
-    click.echo(f"Processed {len(pages)} pages.")
+
+    if verbose:
+        click.echo(f"Processed {len(published)} published pages.")
+
+    if drafts:
+        drafts = Path(drafts).absolute()
+        drafted_pages = draft_pages(blog)
+        with click.progressbar(drafted_pages) as bar:
+            for page in bar:
+                page_path(page, dest_dir=drafts).write_text(page_to_markdown(page))
+        if verbose:
+            click.echo(f"Processed {len(drafted_pages)} drafts.")
 
 
 @runner.command()
