@@ -3,7 +3,7 @@ layout: default
 
 nav_order: 1
 
-title: Install & Usage
+title: Home
 ---
 
 
@@ -12,6 +12,11 @@ title: Install & Usage
 
 > Write articles for your static gen blog in Notion.
 
+
+
+## Work on progress! 
+
+This is a super early version of Notoma — and this document is half true and half fiction.
 
 
 ## Install
@@ -44,15 +49,22 @@ notoma convert --dest ./posts/
 
 This example assumes that you have a `.env` config file with authentication and blog url parameters in it, this guide covers those later.
 
-### Authenticating in Notion
+#### Authenticating in Notion
 
-Since Notion doesn't yet (May 2020) have a public API, Notoma requires your Notion cookie auth token that you can get from your browser:
-{: sp-4}
+Since Notion doesn't yet (May 2020) have a public API, Notoma requires your Notion cookie auth token that you can get from your browser.
 
+You can provide `token_v2` option to every command line call, or store it in your environment, or `.env` file.
 
+#### Converting your Notion articles
 
-### Setting up the Blog database
+`notoma convert --help`
+<div class="codecell" markdown="1">
+<div class="input_area" markdown="1">
 
-Run `notoma create --name Blog` to create a new Blog database in the root of your Notion account.  
+```python
 
-### Converting your Notion articles
+```
+
+</div>
+
+</div>

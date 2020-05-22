@@ -30,6 +30,8 @@ def docs():
         print(f"Converting {fname} to {dest}")
         _convert_nb_to_md(fname, dest)
 
+    _make_readme(NBS_PATH / "index.ipynb")
+
 
 def _get_metadata(notebook: list) -> dict:
     if not notebook["cells"]:
