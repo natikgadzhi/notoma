@@ -72,7 +72,7 @@ def _build_exporter() -> MarkdownExporter:
     and return it.
     """
     exporter = MarkdownExporter()
-    exporter.template_file = "extended-docs-md.tpl"
+    exporter.template_file = "docs-jekyll.md.j2"
     exporter.template_path.append(str(Path(__file__).parent / "templates"))
     exporter.exclude_input_prompt = True
     exporter.exclude_output_prompt = True
