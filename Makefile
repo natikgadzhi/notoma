@@ -23,11 +23,13 @@ docs:
 	touch docs
 
 test:
-	make test
-	# pipenv run nbexec ./notebooks/*.ipynb
+	pipenv run nbexec ./notebooks/*.ipynb
 
 pypi: dist
 	pipenv run twine upload --repository pypi dist/*
+
+pypi-test: dist
+	pipenv run twine upload -r testpypi dist/*
 
 dist: clean
 	python setup.py sdist bdist_wheel

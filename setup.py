@@ -18,23 +18,29 @@ def get_requirements(env):
         return reqs
 
 
-install_requires = get_requirements("base")
-dev_requires = get_requirements("dev")
-
 setup(
     name="Notoma",
     version=notoma_version,
     author="Nate Gadzhibalaev",
     author_email="nate@respawn.io",
     url="https://github.com/xnutsive/notoma/",
-    description="Notion to markdown",
+    description="Write your blog articles in Notion. Notoma converts your Notion database pages to Markdown files.",
     long_description=open(os.path.join(ROOT, "README.md")).read(),
     long_description_content_type="text/markdown",
     zip_safe=False,
-    python_requires=">3.6",
-    install_requires=install_requires,
-    extras_require={"dev": dev_requires},
+    python_requires=">=3.7",
+    install_requires=get_requirements("base"),
+    extras_require={"dev": get_requirements("dev")},
     license="Apache Software License 2.0",
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: Apache Software License",
+        "Typing :: Typed",
+    ],
+    project_urls={
+        "Documentation": "https://xnutsive.github.io/notoma/",
+        "Source Code": "https://github.com/xnutsive/notoma/",
+    },
     entry_points={
         "console_scripts": [
             "notoma-dev = notoma.dev:cli",
