@@ -9,6 +9,7 @@ from nbconvert.preprocessors import RegexRemovePreprocessor
 ROOT_PATH = Path(__file__).parent.parent
 NBS_PATH = ROOT_PATH / "notebooks/"
 DOCS_PATH = ROOT_PATH / "docs/"
+ROOT_DOCS = {"index.ipynb": "README.md", "contributing.ipynb": "CONTRIBUTING.md"}
 
 
 @click.group(help="Notoma dev tools: tests and documentation generators.")
@@ -30,7 +31,12 @@ def docs():
         print(f"Converting {fname} to {dest}")
         _convert_nb_to_md(fname, dest)
 
-    _make_readme(NBS_PATH / "index.ipynb")
+    for nb, dest in ROOT_DOCS.items():
+        nb_path = NBS_PATH / nb
+        if not nb_path.exists():
+            continue
+        _convert_nb_to_md(nb_path, ROOT_PATH / dest, front_matter=False)
+        print(f"Converted {nb} to {dest} in repo root.")
 
 
 def _get_metadata(notebook: list) -> dict:
@@ -49,7 +55,7 @@ def _get_metadata(notebook: list) -> dict:
 
 
 def _convert_nb_to_md(
-    fname: Union[str, Path], dest: Union[str, Path] = DOCS_PATH
+    fname: Union[str, Path], dest: Union[str, Path], front_matter: bool = True,
 ) -> None:
     """
     Converts a Jupyter Notebook in `fname` to a Jekyll-compatible Markdown file
@@ -63,7 +69,9 @@ def _convert_nb_to_md(
     prep.patterns = [r"![\s\S]", "^%METADATA%", "^#hide"]
     notebook, _ = prep.preprocess(notebook, {})
 
-    converted = exporter.from_notebook_node(notebook, resources={"meta": metadata})
+    converted = exporter.from_notebook_node(
+        notebook, resources={"meta": metadata, "front_matter": front_matter}
+    )
     with open(str(dest), "w") as f:
         f.write(converted[0])
 
@@ -85,4 +93,4 @@ def _make_readme(fname: Union[str, Path]):
     """
     Converts a notebook at `fname` to README.md in repository root.
     """
-    _convert_nb_to_md(fname, ROOT_PATH / "README.md")
+    _convert_nb_to_md(fname, ROOT_PATH / "README.md", front_matter=False)

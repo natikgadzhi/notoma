@@ -1,13 +1,3 @@
----
-layout: default
-
-nav_order: 1
-
-title: Home
----
-
-
-
 # Notoma
 
 > Write articles for your static gen blog in Notion.
