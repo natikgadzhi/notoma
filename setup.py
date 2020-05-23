@@ -19,7 +19,7 @@ def get_requirements(env):
 
 
 setup(
-    name="Notoma",
+    name="notoma",
     version=notoma_version,
     author="Nate Gadzhibalaev",
     author_email="nate@respawn.io",
