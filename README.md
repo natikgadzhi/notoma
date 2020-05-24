@@ -11,8 +11,7 @@ File to edit instead: notebooks/index.ipynb
 
 <a href="https://codeclimate.com/github/xnutsive/notoma/maintainability"><img src="https://api.codeclimate.com/v1/badges/70943357e5d2c54c153a/maintainability" /></a>
 
-
-
+---
 ## Install
 
 Notoma is available via Pip ~~and Homebrew~~: 
@@ -22,6 +21,7 @@ Notoma is available via Pip ~~and Homebrew~~:
 pip install notoma
 ```
 
+---
 ## What can you do with Notoma
 Notoma provides commands to: 
 - Convert contents of your Notion Blog database to a bunch of Markdown files.
@@ -42,6 +42,7 @@ Notoma uses an internal Notion API, and that, unfortunately, requires you to pro
 
 You can provide `token_v2` option to every command line call, or store it in your environment, or [`.env` config file](.env.sample).
 
+---
 ## Notion database structure
 Notoma has very few expectations about how your Notion is structured. Here's a [public example database](https://www.notion.so/respawn/7b46cea379bd4d45b68860c2fa35a2d4?v=b4609f6aae0d4fc1adc65a73f72d0e21).
 

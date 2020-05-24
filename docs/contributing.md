@@ -19,6 +19,7 @@ Contributions are very welcome — please do ask questions and suggest ideas in
 
 Please feel free to file a Github Issue if you found a behavior that you feel is weird or counterintuitive, bad UX, or any errors or bugs.
 
+---
 ### Pull Requests
 
 Thank you for considering writing some code for Notoma! This part describes the easiest way to get up to speed with Notoma development, and how to create a pull request.

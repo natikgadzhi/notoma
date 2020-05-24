@@ -22,6 +22,10 @@ docs:
 	pipenv run notoma-dev docs
 	touch docs
 
+# Generate docs from the example Notion database
+docs-notion:
+	pipenv run notion convert --from "https://www.notion.so/respawn/0b988490f3fc46fcbb6036e652b5a296?v=598cd4e915b94d4da85072f2842117eb" --dest ./docs/
+
 .PHONY: nbexec
 nbexec:
 	pipenv run nbexec ./notebooks/*.ipynb

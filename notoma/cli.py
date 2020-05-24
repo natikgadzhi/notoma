@@ -68,7 +68,10 @@ def convert(
     client = notion_client(config.token_v2)
     blog = notion_blog_database(client, config.blog_url)
 
+    click.echo(f"Processing articles from Notion: {blog.parent.title}")
     published = published_pages(blog)
+    click.echo(f"{len(published)} articles to process.")
+
     with click.progressbar(published) as bar:
         for page in bar:
             page_path(page, dest_dir=dest).write_text(page_to_markdown(page))
