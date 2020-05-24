@@ -58,11 +58,10 @@ def page_path(page: PageBlock, dest_dir: Path = Path(".")) -> Path:
 
 def front_matter(page: PageBlock, config: Config = Config()) -> str:
     "Builds and returns a page front matter in a yaml-like format."
-    internals = ["title"]
     all_props = page.get_all_properties()
     if "layout" not in all_props:
         all_props["layout"] = config.default_layout
-    renderables = {k: v for k, v in all_props.items() if k not in internals}
+    renderables = {k: v for k, v in all_props.items() if v != ""}
     return __sanitize_front_matter(renderables)
 
 
