@@ -21,34 +21,22 @@ File to edit instead: notebooks/index.ipynb
 
 
 
-## Work on progress! 
-
-This is a super early version of Notoma — and this document is half true and half fiction.
-
-
 ## Install
 
-Notoma is available via Pip and Homebrew: 
+Notoma is available via Pip ~~and Homebrew~~: 
 
 ```bash
 # Installing with pip, use this if you plan using Notoma as a python library.
 pip install notoma
 ```
 
-```bash
-# Installing with brew
-# Use this if you just want the CLI tool
-brew install cask/xnutsive/notoma
-```
-
-## Basic Usage
-
+## What can you do with Notoma
 Notoma provides commands to: 
 - Convert contents of your Notion Blog database to a bunch of Markdown files.
-- Watch Notion Blog database for updates and regenerate Markdown files on any updates.
-- Create a new Notion database for your Blog with all required fields.
+- *Coming soon*: Watch Notion Blog database for updates and regenerate Markdown files on any updates.
+- *Coming soon*: Create a new Notion database for your Blog with all required fields.
 
-Here's the basic usage example: 
+Basic usage example: this command will convert only published posts from a Notion blog database to the `./posts/ directory`.
 
 ```bash
 notoma convert --dest ./posts/
@@ -58,20 +46,18 @@ This example assumes that you have a `.env` config file with authentication and 
 
 #### Authenticating in Notion
 
-Since Notion doesn't yet (May 2020) have a public API, Notoma requires your Notion cookie auth token that you can get from your browser.
+Notoma uses an internal Notion API, and that, unfortunately, requires you to provide an authentication token `token_v2` that you can find in your notion.so cookes.
 
-You can provide `token_v2` option to every command line call, or store it in your environment, or `.env` file.
+You can provide `token_v2` option to every command line call, or store it in your environment, or [`.env` config file](.env.sample).
 
-#### Converting your Notion articles
+## Notion database structure
+Notoma has very few expectations about how your Notion is structured. Here's a [public example database](https://www.notion.so/respawn/7b46cea379bd4d45b68860c2fa35a2d4?v=b4609f6aae0d4fc1adc65a73f72d0e21).
 
-`notoma convert --help`
-<div class="codecell" markdown="1">
-<div class="input_area" markdown="1">
+Notoma requires that your Notion blog database has the following **properties**:
+- **Published**: whether the article is published, or is still a draft
+- **Title**: Will be used to create a file name for that article's Markdown equivalent file. *Won't be used in the article itself.*
 
-```python
+Notoma tries to parse other properties and add them as front matter into the resulting Markdown articles: 
+- **Published at** will be used as publicataion date for the article, if present.
+- **Categories** will be used as `categories` front matter key, so it's expected to be a **multiple choice** propery.
 
-```
-
-</div>
-
-</div>
