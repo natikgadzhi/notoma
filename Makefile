@@ -22,8 +22,10 @@ docs:
 	pipenv run notoma-dev docs
 	touch docs
 
-test:
+.PHONY: nbexec
+nbexec:
 	pipenv run nbexec ./notebooks/*.ipynb
+	@sleep 1
 
 pypi: dist
 	pipenv run twine upload --repository pypi dist/*

@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Union
 import click
 import nbformat
+import re
 from nbconvert.exporters import MarkdownExporter
 from nbconvert.preprocessors import RegexRemovePreprocessor
 
@@ -49,8 +50,10 @@ def _get_metadata(notebook: list) -> dict:
     for cell in md_cells:
         if cell.startswith("%METADATA%"):
             for line in cell.split("\n")[1:]:
-                k, v, *rest = [part.strip() for part in line.split(":")]
-                meta[k.lower()] = v
+                pair = re.match(r"^(\w+): (\w+)$", line)
+                if pair:
+                    k, v = pair.groups()
+                    meta[k.lower()] = v
     return meta
 
 
@@ -70,7 +73,12 @@ def _convert_nb_to_md(
     notebook, _ = prep.preprocess(notebook, {})
 
     converted = exporter.from_notebook_node(
-        notebook, resources={"meta": metadata, "front_matter": front_matter}
+        notebook,
+        resources={
+            "meta": metadata,
+            "front_matter": front_matter,
+            "nb_path": f"notebooks/{Path(fname).name}",
+        },
     )
     with open(str(dest), "w") as f:
         f.write(converted[0])
