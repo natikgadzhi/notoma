@@ -19,6 +19,7 @@ File to edit instead: notebooks/index.ipynb
 
 <a href="https://codeclimate.com/github/xnutsive/notoma/maintainability"><img src="https://api.codeclimate.com/v1/badges/70943357e5d2c54c153a/maintainability" /></a>
 <a href="https://pypi.org/project/notoma/"><img src="https://img.shields.io/pypi/v/notoma" alt="pypi" /></a>
+![Linters](https://github.com/xnutsive/notoma/workflows/Linters/badge.svg)
 
 ---
 ## Install
