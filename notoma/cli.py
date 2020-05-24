@@ -64,29 +64,20 @@ def convert(
     notion_url: str = None,
 ) -> None:
     config = Config(token_v2=token_v2, blog_url=notion_url)
+    __validate_config(config)
+
     dest = Path(dest).absolute()
     client = notion_client(config.token_v2)
     blog = notion_blog_database(client, config.blog_url)
 
-    click.echo(f"Processing articles from Notion: {blog.parent.title}")
-    published = published_pages(blog)
-    click.echo(f"{len(published)} articles to process.")
-
-    with click.progressbar(published) as bar:
-        for page in bar:
-            page_path(page, dest_dir=dest).write_text(page_to_markdown(page))
-
     if verbose:
-        click.echo(f"Processed {len(published)} published pages.")
+        click.echo(f"Processing articles from Notion: {blog.parent.title}")
+
+    __convert_pages(published_pages(blog), dest, verbose)
 
     if drafts:
-        drafts = Path(drafts).absolute()
-        drafted_pages = draft_pages(blog)
-        with click.progressbar(drafted_pages) as bar:
-            for page in bar:
-                page_path(page, dest_dir=drafts).write_text(page_to_markdown(page))
-        if verbose:
-            click.echo(f"Processed {len(drafted_pages)} drafts.")
+        __convert_pages(draft_pages(blog), Path(drafts).absolute(), verbose)
+        draft_pages(blog)
 
 
 @runner.command()
@@ -103,3 +94,39 @@ def new() -> None:
     Create a new Notion Blog
     """
     raise NotImplementedError("Creating a new blog is not implemented yet.")
+
+
+def __convert_pages(pages: list, dest_dir: Path, verbose: bool = False) -> None:
+    "Convert a bunch of pages with a nice progress bar."
+
+    if verbose:
+        click.echo(f"{len(pages)} pages to process.")
+
+    with click.progressbar(pages) as bar:
+        for page in bar:
+            page_path(page, dest_dir=dest_dir).write_text(page_to_markdown(page))
+
+    if verbose:
+        click.echo(f"Processed {len(pages)} pages.")
+
+
+def __validate_config(config: Config) -> None:
+    """
+    Validates the provided options and prints errors to stdout,
+    then aborts if there are any errors.
+    """
+    errors = list()
+    if config.token_v2 is None:
+        errors.append(
+            "Error: Authentication token `token_v2` is not provided. Try --token option."
+        )
+
+    if config.blog_url is None:
+        errors.append(
+            "Error: Notion Blog Database URL not provided. Try --from option."
+        )
+
+    if len(errors) > 0:
+        for e in errors:
+            click.echo(e)
+        raise click.Abort()
