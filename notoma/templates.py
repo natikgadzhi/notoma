@@ -28,6 +28,7 @@ def template(name: Union[str, Path], debug: bool = False) -> Template:
         template_name=__template_name,
         render_block=__render_block,
         numbered_list_index=__numbered_list_index,
+        notion_url=__notion_url,
     )
 
     env = Environment(
@@ -36,9 +37,11 @@ def template(name: Union[str, Path], debug: bool = False) -> Template:
         trim_blocks=True,
         lstrip_blocks=True,
     )
+
     for fl, func in filters.items():
         env.filters[fl] = func
     env.globals["debug"] = debug
+
     return env.get_template(f"{name}.md.j2")
 
 
@@ -92,3 +95,8 @@ def __snake_case(input_string: str) -> str:
     "Returns a new string containing the input string, in camel_case."
     output = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", input_string)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", output).lower()
+
+
+def __notion_url(page: block.PageBlock) -> str:
+    "Returns the page's Notion URL."
+    return page.get_browseable_url()
