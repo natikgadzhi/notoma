@@ -1,7 +1,8 @@
 ---
+has_children: false
 published: true
 layout: default
-nav_order: 3
+nav_order: 4
 title: More Examples
 ---
 <!--

@@ -10,6 +10,7 @@ from nbconvert.preprocessors import RegexRemovePreprocessor
 ROOT_PATH = Path(__file__).parent.parent
 NBS_PATH = ROOT_PATH / "notebooks/"
 DOCS_PATH = ROOT_PATH / "docs/"
+
 ROOT_DOCS = {"index.ipynb": "README.md", "contributing.ipynb": "CONTRIBUTING.md"}
 
 
@@ -50,10 +51,9 @@ def _get_metadata(notebook: list) -> dict:
     for cell in md_cells:
         if cell.startswith("%METADATA%"):
             for line in cell.split("\n")[1:]:
-                pair = re.match(r"^(\w+): (\w+)$", line)
-                if pair:
-                    k, v = pair.groups()
-                    meta[k.lower()] = v
+                parts = line.split(":")
+                if len(parts) > 1:
+                    meta[parts[0].lower()] = parts[1].strip()
     return meta
 
 
@@ -92,8 +92,8 @@ def _build_exporter() -> MarkdownExporter:
     exporter = MarkdownExporter()
     exporter.template_file = "docs-jekyll.md.j2"
     exporter.template_path.append(str(Path(__file__).parent / "templates"))
-    exporter.exclude_input_prompt = True
-    exporter.exclude_output_prompt = True
+    exporter.exclude_input_prompt = False
+    exporter.exclude_output_prompt = False
     return exporter
 
 

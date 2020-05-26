@@ -15,4 +15,3 @@ group :jekyll_plugins do
 end
 
 gem "jekyll-github-metadata"
-

@@ -4,8 +4,8 @@
 {% if resources['meta'] | length > 0 and resources['front_matter'] is true %}
 ---
 {%- for k, v in resources['meta'].items() %}
-{{ k }}: {{ v }}
-{% endfor -%}
+{{ k }}: {{ v -}}
+{% endfor %}
 ---
 {% endif %}
 <!--

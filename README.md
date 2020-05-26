@@ -5,13 +5,16 @@ File to edit instead: notebooks/index.ipynb
 
 # Notoma
 
-> Write articles for your static gen blog in Notion.
+Write articles for your static gen blog in Notion.
 
 
 
 <a href="https://codeclimate.com/github/xnutsive/notoma/maintainability"><img src="https://api.codeclimate.com/v1/badges/70943357e5d2c54c153a/maintainability" /></a>
 <a href="https://pypi.org/project/notoma/"><img src="https://img.shields.io/pypi/v/notoma" alt="pypi" /></a>
 ![Linters](https://github.com/xnutsive/notoma/workflows/Linters/badge.svg)
+
+1. TOC
+{:toc}
 
 ---
 ## Install
@@ -36,7 +39,7 @@ Basic usage example: this command will convert only published posts from a Notio
 notoma convert --dest ./posts/
 ```
 
-This example assumes that you have a `.env` config file with authentication and blog url parameters in it, this guide covers those later.
+This example assumes that you have a `.env` config file with authentication and blog url parameters in it.
 
 #### Authenticating in Notion
 
