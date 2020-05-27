@@ -22,4 +22,4 @@ jobs:
 
     - name: Lint notebooks
       run: |
-        pipenv run make nbexec
+        make nbexec
