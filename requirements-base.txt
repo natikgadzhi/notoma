@@ -1,4 +1,4 @@
--i https://pypi.org/simple
+-i https://pypi.org/simple/
 beautifulsoup4==4.9.1
 bs4==0.0.1
 cached-property==1.5.1
