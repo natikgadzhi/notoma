@@ -1,8 +1,7 @@
 ---
 layout: default
 nav_order: 1
-title: README
-has_children: true
+title: Introduction
 ---
 
 <!--

@@ -1,0 +1,6 @@
+{% if block.width is not none %}
+<img src="{{block.source}}" alt="{{block.caption}}" width="{{block.width}}px" />
+{% else %}
+![{{block.caption}}]({{block.source}})
+{% endif %}
+{# TODO: Support `figcaption` and maybe overriding templates in the blog directory? #}
