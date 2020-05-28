@@ -69,7 +69,7 @@ def _convert_nb_to_md(
     exporter = _build_exporter()
 
     prep = RegexRemovePreprocessor()
-    prep.patterns = [r"![\s\S]", "^%METADATA%", "^#hide"]
+    prep.patterns = ["^%METADATA%", "^#hide"]
     notebook, _ = prep.preprocess(notebook, {})
 
     converted = exporter.from_notebook_node(
@@ -94,6 +94,8 @@ def _build_exporter() -> MarkdownExporter:
     exporter.template_path.append(str(Path(__file__).parent / "templates"))
     exporter.exclude_input_prompt = False
     exporter.exclude_output_prompt = False
+    exporter.exclude_unknown = False
+    exporter.exclude_raw = False
     return exporter
 
 
