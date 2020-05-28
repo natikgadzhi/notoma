@@ -19,8 +19,10 @@ Write articles for your static gen blog in Notion.
 <a href="https://pypi.org/project/notoma/"><img src="https://img.shields.io/pypi/v/notoma" alt="pypi" /></a>
 ![Linters](https://github.com/xnutsive/notoma/workflows/Linters/badge.svg)
 
-1. TOC
-{:toc}
+- [Documentation website](https://xnutsive.github.io/notoma/)
+    - [Using the CLI](https://xnutsive.github.io/notoma/using-the-cli)
+    - [Contributing](https://xnutsive.github.io/notoma/contributing)
+    - [Supported Markdown Tags](https://xnutsive.github.io/notoma/supported-markdown-tags) 
 
 ---
 ## Install

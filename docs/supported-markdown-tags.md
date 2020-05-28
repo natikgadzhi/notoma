@@ -14,6 +14,10 @@ Notion link for this article: https://www.notion.so/d7a417f3a7b34023b833e746e30f
 
 This page shows off what tags are supported — it's generated with Notoma itself, from a Notion page [right here](https://www.notion.so/respawn/Supported-Markdown-d7a417f3a7b34023b833e746e30fb7d7).
 
+__Some bold text__ and *some italic text,* also some ~~strikethrough~~.
+
+Link to another page in the Notion blog: ‣.
+
 ## Subhedings and typography
 
 ### Subsubheading for list items

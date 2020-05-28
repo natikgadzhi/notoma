@@ -1,6 +1,7 @@
 host: localhost
 port: 4000
 baseurl: /notoma
+permalink: /:categories/:title
 
 # Aux links for the upper right navigation
 aux_links:
@@ -11,9 +12,6 @@ aux_links:
 footer_content: |
   Copyright &copy; 2020 Nate Gadzibalaev. Distributed by an <a href=\"https://github.com/pmarsceill/just-the-docs/tree/master/LICENSE.txt\">Apache 2 license.</a>
 
-
-
-# TODO: Add Google Analytics beacon
 ga_tracking: UA-17294800-4
 
 exclude:
