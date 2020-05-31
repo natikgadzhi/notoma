@@ -16,7 +16,7 @@ This page shows off what tags are supported — it's generated with Notoma itsel
 
 __Some bold text__ and *some italic text,* also some ~~strikethrough~~.
 
-Link to another page in the Notion blog: ‣.
+Link to another page in the Notion blog (@-style link): ‣.
 
 ## Subhedings and typography
 
@@ -49,4 +49,9 @@ When converting to Markdown, Images will respect the width if you shrink them in
 <img src="https://images.unsplash.com/photo-1456324504439-367cee3b3c32?ixlib=rb-1.2.1&q=85&fm=jpg&crop=entropy&cs=srgb" alt="_Italic Image caption!_" width="336px" />
 
 
+
+### Youtube Videos
+
+<iframe width="624" height="351" src="https://www.youtube.com/embed/BTKcDlow9dw?feature=oembed" frameborder="0" allowfullscreen>
+</iframe>
 
