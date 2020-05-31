@@ -45,6 +45,7 @@ end
 
 ### Images
 
+When converting to Markdown, Images will respect the width if you shrink them in Notion.
 <img src="https://images.unsplash.com/photo-1456324504439-367cee3b3c32?ixlib=rb-1.2.1&q=85&fm=jpg&crop=entropy&cs=srgb" alt="_Italic Image caption!_" width="336px" />
 
 
