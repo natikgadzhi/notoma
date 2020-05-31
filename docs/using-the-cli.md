@@ -1,7 +1,7 @@
 ---
 layout: default
 nav_order: 2
-title: Using the CLI
+title: Using the Command Line Tool
 ---
 
 <!--
