@@ -11,13 +11,24 @@ File to edit instead: notebooks/contributing.ipynb
 
 # Contributing
 
-Contributions are very welcome — please do ask questions and suggest ideas in Issues, and feel free to implement features you want and submit them via Pull Requests.
+Contributions are very welcome — please do ask questions and suggest ideas in [Issues](https://github.com/xnutsive/notoma/issues), and feel free to implement features you want and submit them via Pull Requests.
 
 ### Reporting issues
 
 Please feel free to file a Github Issue if you found a behavior that you feel is weird or counterintuitive, bad UX, or any errors or bugs.
 
 ---
+
+### How to participate
+
+Notoma uses a [project board to keep track of what we're currently working on](https://github.com/xnutsive/notoma/projects/4).
+
+We're trying to mark issues that are small enough, and would onboard you into Notoma's internal workings with `good-first-issue` label. That said, feel free to comment on any issue that you'd like to work on, as long as it's not assigned and not in the ”In progress“ column yet. 
+
+Also, please feel free to ask any questions if you'd want to work on something for Notoma, but you're not sure where or how to start — just create a new issue, or ask a question in the existing one. 
+
+---
+
 ### Pull Requests
 
 Thank you for considering writing some code for Notoma! This part describes the easiest way to get up to speed with Notoma development, and how to create a pull request.
