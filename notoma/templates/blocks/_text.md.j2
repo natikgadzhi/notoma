@@ -1,1 +1,5 @@
-{{ block.title }}
+{%- if block is notion_link -%}
+    [{{ block | linked_page_title }}]({{ block | linked_page_url}})
+{%- else -%}
+    {{ block.title }}
+{%- endif %}

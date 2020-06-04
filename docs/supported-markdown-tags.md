@@ -16,7 +16,10 @@ This page shows off what tags are supported — it's generated with Notoma itsel
 
 __Some bold text__ and *some italic text,* also some ~~strikethrough~~.
 
-Link to another page in the Notion blog (@-style link): ‣.
+Link to another page in the Notion blog (@-style link): 
+
+
+[Blogs using Notoma](https://www.notion.so/c720ce655edf4f8e9d52b533f02b115e)
 
 ## Subhedings and typography
 
