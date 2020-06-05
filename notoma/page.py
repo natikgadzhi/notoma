@@ -2,6 +2,8 @@ from pathlib import Path
 from string import Template
 from datetime import datetime
 
+import re
+
 from notion.collection import NotionDate, CollectionRowBlock
 from notion.block import PageBlock
 
@@ -14,8 +16,12 @@ Functions that operate on Notion's `PageBlock`.
 
 def page_path(page: PageBlock, dest_dir: Path = Path(".")) -> Path:
     "Build a .md file path in `dest_dir` based on a Notion page metadata."
-    fname = "-".join(page.title.lower().replace(".", "").split(" ")) + ".md"
+    fname = __title_to_slug(page.title) + ".md"
     return dest_dir / fname
+
+
+def __title_to_slug(title: str) -> str:
+    return re.sub(r"[^\w\-]", "", re.sub(r"\s+", "-", title)).lower()
 
 
 def front_matter(page: CollectionRowBlock, config: Config) -> str:
@@ -62,7 +68,7 @@ def page_url_substitutions(page: PageBlock, config: Config) -> dict:
     # FIXME Clean this up into a mapping of callables?
     #
     if "title" in subs:
-        subs["title"] = "-".join(subs["title"].split(" ")).replace(" ", "").lower()
+        subs["title"] = __title_to_slug(subs["title"])
 
     if "categories" in subs:
         subs["categories"] = "/".join(subs["categories"])
