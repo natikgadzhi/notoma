@@ -6,6 +6,8 @@ CONF_MAP = dict(
     token_v2="NOTOMA_NOTION_TOKEN_V2",
     blog_url="NOTOMA_NOTION_BLOG_URL",
     default_layout="NOTOMA_DEFAULT_LAYOUT",
+    permalink_pattern="NOTOMA_PERMALINK_PATTERN",
+    baseurl="NOTOMA_BASE_URL",
 )
 
 
@@ -43,12 +45,11 @@ class Config:
     def blog_url(self) -> str:
         return self.__config["blog_url"]
 
-    @property
-    def default_layout(self) -> str:
-        return self.__config["default_layout"]
-
     def __getitem__(self, key):
         return self.__config[key]
+
+    def __iter__(self):
+        return iter(self.__config)
 
     def __repr__(self):
         return "\n".join(f"{k}: {v}" for k, v in self.__config.items())

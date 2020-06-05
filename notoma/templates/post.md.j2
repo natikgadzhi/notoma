@@ -1,6 +1,6 @@
 ---
 {% for k, v in front_matter.items() %}
-{{ k }}: {{ v }}
+{{ k |lower |snake_case }}: {{ v }}
 {% endfor %}
 ---
 <!--

@@ -73,10 +73,10 @@ def convert(
     if verbose:
         click.echo(f"Processing articles from Notion: {blog.parent.title}")
 
-    __convert_pages(published_pages(blog), dest, verbose)
+    __convert_pages(published_pages(blog), dest, config, verbose)
 
     if drafts:
-        __convert_pages(draft_pages(blog), Path(drafts).absolute(), verbose)
+        __convert_pages(draft_pages(blog), Path(drafts).absolute(), config, verbose)
         draft_pages(blog)
 
 
@@ -96,7 +96,9 @@ def new() -> None:
     raise NotImplementedError("Creating a new blog is not implemented yet.")
 
 
-def __convert_pages(pages: list, dest_dir: Path, verbose: bool = False) -> None:
+def __convert_pages(
+    pages: list, dest_dir: Path, config: Config, verbose: bool = False
+) -> None:
     "Convert a bunch of pages with a nice progress bar."
 
     if verbose:
@@ -104,7 +106,9 @@ def __convert_pages(pages: list, dest_dir: Path, verbose: bool = False) -> None:
 
     with click.progressbar(pages) as bar:
         for page in bar:
-            page_path(page, dest_dir=dest_dir).write_text(page_to_markdown(page))
+            page_path(page, dest_dir=dest_dir).write_text(
+                page_to_markdown(page, config=config)
+            )
 
     if verbose:
         click.echo(f"Processed {len(pages)} pages.")

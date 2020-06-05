@@ -1,4 +1,3 @@
-import yaml
 from pathlib import Path
 from typing import Union, List
 
@@ -7,7 +6,8 @@ from notion.block import PageBlock
 from notion.collection import Collection, NotionDate
 
 from .config import Config
-from .templates import template
+from .templates import load_template
+from .page import page_path, front_matter
 
 
 def notion_client(token_v2: str) -> NotionClient:
@@ -43,34 +43,8 @@ def draft_pages(blog: Collection) -> List[PageBlock]:
     ]
 
 
-def page_to_markdown(page: PageBlock) -> str:
-    "Translates a Notion Page (`PageBlock`) into a Markdown string."
-    return template("post", debug=True).render(
-        page=page, front_matter=front_matter(page)
+def page_to_markdown(page: PageBlock, config: Config) -> str:
+    "Translates a Notion Page (`PageBlock`) into a Markdown string and returns it."
+    return load_template("post", debug=True, config=config).render(
+        page=page, front_matter=front_matter(page, config)
     )
-
-
-def page_path(page: PageBlock, dest_dir: Path = Path(".")) -> Path:
-    "Build a .md file path in `dest_dir` based on a Notion page metadata."
-    fname = "-".join(page.title.lower().replace(".", "").split(" ")) + ".md"
-    return dest_dir / fname
-
-
-def front_matter(page: PageBlock, config: Config = Config()) -> str:
-    "Builds and returns a page front matter in a yaml-like format."
-    all_props = page.get_all_properties()
-    if "layout" not in all_props:
-        all_props["layout"] = config.default_layout
-    renderables = {k: v for k, v in all_props.items() if v != ""}
-    return __sanitize_front_matter(renderables)
-
-
-def __sanitize_front_matter(items: dict) -> dict:
-    "Sanitizes and returns front matter items."
-    for k, v in items.items():
-        if type(v) not in [str, list]:
-            if isinstance(v, NotionDate):
-                items[k] = v.start
-            if isinstance(v, bool):
-                items[k] = str(v).lower()
-    return items
