@@ -17,8 +17,8 @@ This page shows off what tags are supported — it's generated with Notoma itsel
 
 __Some bold text__ and *some italic text,* also some ~~strikethrough~~.
 
-Link to another page in the Notion blog (@-style link): [Blogs using Notoma](https://xnutsive.notoma.io/blogs-using-notoma/)
-_For these links to work, you need to specify the permalink pattern for your blog in the_ [Configuration](https://xnutsive.notoma.io/configuration/).
+Link to another page in the Notion blog (@-style link): [Blogs using Notoma](https://xnutsive.github.io/notoma/blogs-using-notoma)
+_For these links to work, you need to specify the permalink pattern for your blog in the_ [Configuration](https://xnutsive.github.io/notoma/configuration).
 ## Subhedings and typography
 
 ### Subsubheading for list items
