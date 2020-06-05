@@ -8,8 +8,8 @@ click==7.1.2
 commonmark==0.9.1
 dictdiffer==0.8.1
 idna==2.9
-jinja2==3.0.0a1
-markupsafe==2.0.0a1
+jinja2==2.11.2
+markupsafe==1.1.1
 notion==0.0.25
 python-dotenv==0.13.0
 python-slugify==4.0.0

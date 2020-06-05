@@ -15,7 +15,7 @@ jinja2 = "*"
 [dev-packages]
 # Linters
 pre-commit = "*"
-black = "*"
+black = "==19.10b0"
 flake8 = "*"
 # Jupyter is used to create docs and interactive examples
 jupyter = "*"
@@ -29,4 +29,4 @@ twine = "*"
 notoma = {editable = true,path = "."}
 
 [pipenv]
-allow_prereleases = true
+# allow_prereleases = true
