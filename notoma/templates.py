@@ -12,6 +12,7 @@ from jinja2.runtime import Context
 
 import notion.block as block
 from notion.collection import CollectionRowBlock
+from notion.markdown import notion_to_markdown
 
 import re
 import string
@@ -39,9 +40,7 @@ def load_template(
         snake_case=__snake_case,
         numbered_list_index=__numbered_list_index,
         notion_url=__notion_url,
-        linked_page_id=__linked_page_id,
-        linked_page_url=__linked_page_url,
-        linked_page_title=__linked_page_title,
+        preprocess_notion_links=__preprocess_notion_links,
     )
 
     env = Environment(
@@ -58,6 +57,33 @@ def load_template(
     env.globals["config"] = config
     env.tests["notion_link"] = __is_notion_link
     return env.get_template(f"{name}.md.j2")
+
+
+#
+# Helpers
+#
+
+
+def __get_linked_page(this_page: block.PageBlock, page_id: str) -> CollectionRowBlock:
+    "Returns the linked CollectionRowBlock by it's block id. Not exposed to the template."
+    linked_page = CollectionRowBlock(this_page._client, page_id)
+
+    if not linked_page.parent == this_page.parent:
+        raise ValueError(f"The page {page_id} has different parent.")
+
+    return linked_page
+
+
+def __linked_page_url(config: Config, page: CollectionRowBlock) -> str:
+    "Returns a URL of a linked page."
+    pattern = string.Template(config["permalink_pattern"])
+
+    # TODO: Add tests and remove this quite questionable behavior.
+    # Or make it work on a flag, and add logging.
+    if pattern is None:
+        return page.get_browseable_url()
+
+    return build_page_url(page, pattern, config)
 
 
 #
@@ -123,45 +149,31 @@ def __notion_url(page: block.PageBlock) -> str:
     return page.get_browseable_url()
 
 
-def __linked_page_id(b: block.TextBlock) -> str:
-    "Jinja filter. Returns a linked Notion page ID from a Notion Block."
-    # This assumes that the block has a raw formatting in the `properties.title`
-    # path, and returns the appropriate field.
-    # If and when the Notion API changes, this will fail.
-    return b.get("properties.title")[0][1][0][1]
-
-
-def __get_linked_page(ctx: Context, page_id: str) -> CollectionRowBlock:
-    "Returns the linked CollectionRowBlock by it's block id. Not exposed to the template."
-    this_page = ctx["page"]
-    linked_page = CollectionRowBlock(this_page._client, page_id)
-
-    if not linked_page.parent == this_page.parent:
-        raise ValueError(f"The page {page_id} has different parent.")
-
-    return linked_page
-
-
 @contextfilter
-def __linked_page_url(ctx: Context, b: block.TextBlock) -> str:
-    "Jinja filter, returns a URL of a linked page."
+def __preprocess_notion_links(ctx: Context, b: block.TextBlock) -> str:
     config = ctx["config"]
-    linked_page = __get_linked_page(ctx, __linked_page_id(b))
+    chunks = b.get("properties.title")
 
-    pattern = string.Template(config["permalink_pattern"])
+    if chunks is None or len(chunks) == 0:
+        return ""
 
-    # TODO: Add tests and remove this quite questionable behavior.
-    # Or make it work on a flag, and add logging.
-    if pattern is None:
-        return linked_page.get_browseable_url()
+    for chunk in chunks:
+        # For the chunks that have formatting
+        if len(chunk) > 1:
+            # Each chunk can have multiple modifiers
+            for modifier in chunk[1]:
+                # Only process Notion page links.
+                # Replace Notion link formatting with a regular
+                # Markdown link formatting and invoke Noton Py's
+                # formatting function.
+                if modifier[0] == "p":
+                    page_id = modifier[1]
+                    page = __get_linked_page(ctx["page"], page_id)
+                    modifier[0] = "a"
+                    modifier[1] = __linked_page_url(config, page)
+                    chunk[0] = page.title
 
-    return build_page_url(linked_page, pattern, config)
-
-
-@contextfilter
-def __linked_page_title(ctx: Context, b: block.TextBlock) -> str:
-    "Jinja filter, returns the title of the linked page."
-    return __get_linked_page(ctx, __linked_page_id(b)).title
+    return notion_to_markdown(chunks)
 
 
 #
@@ -175,7 +187,7 @@ def __is_notion_link(b: block.TextBlock) -> bool:
         return False
 
     raw_title = b.get("properties.title")
-    if len(raw_title[0]) > 1:
-        modifier = raw_title[0][1]
-        # the item after the modifier "p" is the linked page ID
-        return modifier[0][0] == "p"
+    for chunk in raw_title:
+        if len(chunk) > 1:
+            modifier = chunk[1]
+            return modifier[0][0] == "p"
