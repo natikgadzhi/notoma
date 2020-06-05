@@ -6,7 +6,7 @@ from notion.block import PageBlock
 from notion.collection import Collection, NotionDate
 
 from .config import Config
-from .templates import template
+from .templates import load_template
 from .page import page_path, front_matter
 
 
@@ -43,8 +43,8 @@ def draft_pages(blog: Collection) -> List[PageBlock]:
     ]
 
 
-def page_to_markdown(page: PageBlock, config: Config = Config()) -> str:
-    "Translates a Notion Page (`PageBlock`) into a Markdown string."
-    return template("post", debug=True, config=config).render(
-        page=page, front_matter=front_matter(page)
+def page_to_markdown(page: PageBlock, config: Config) -> str:
+    "Translates a Notion Page (`PageBlock`) into a Markdown string and returns it."
+    return load_template("post", debug=True, config=config).render(
+        page=page, front_matter=front_matter(page, config)
     )

@@ -1,5 +1,6 @@
 from typing import Union
 from pathlib import Path
+
 from jinja2 import (
     Environment,
     Template,
@@ -10,11 +11,13 @@ from jinja2 import (
 from jinja2.runtime import Context
 
 import notion.block as block
+from notion.collection import CollectionRowBlock
+
 import re
 import string
 
 from .config import Config
-from .page import front_matter
+from .page import build_page_url
 
 """
 Provides templates that are used in Notion -> Markdown conversion.
@@ -23,7 +26,7 @@ They're currently not utilized, as the render engine actually uses
 """
 
 
-def template(
+def load_template(
     name: Union[str, Path], debug: bool = False, config: Config = Config()
 ) -> Template:
     """
@@ -33,6 +36,7 @@ def template(
     filters = dict(
         template_name=__template_name,
         render_block=__render_block,
+        snake_case=__snake_case,
         numbered_list_index=__numbered_list_index,
         notion_url=__notion_url,
         linked_page_id=__linked_page_id,
@@ -56,6 +60,7 @@ def template(
     return env.get_template(f"{name}.md.j2")
 
 
+#
 # Jinja filters
 #
 
@@ -126,43 +131,31 @@ def __linked_page_id(b: block.TextBlock) -> str:
     return b.get("properties.title")[0][1][0][1]
 
 
-def __get_linked_page(ctx: Context, page_id: str) -> block.PageBlock:
-    "Returns the linked PageBlock by it's block id. Not exposed to the template."
+def __get_linked_page(ctx: Context, page_id: str) -> CollectionRowBlock:
+    "Returns the linked CollectionRowBlock by it's block id. Not exposed to the template."
     this_page = ctx["page"]
-    linked_page = block.PageBlock(this_page._client, page_id)
+    linked_page = CollectionRowBlock(this_page._client, page_id)
 
-    if linked_page.parent == this_page.parent:
-        return linked_page
-    else:
+    if not linked_page.parent == this_page.parent:
         raise ValueError(f"The page {page_id} has different parent.")
+
+    return linked_page
 
 
 @contextfilter
 def __linked_page_url(ctx: Context, b: block.TextBlock) -> str:
     "Jinja filter, returns a URL of a linked page."
-    # TODO: Use a helper provided in .core that will build the page URL with
-    # the configurable permalinks pattern.
-    #
-
     config = ctx["config"]
     linked_page = __get_linked_page(ctx, __linked_page_id(b))
 
     pattern = string.Template(config["permalink_pattern"])
+
+    # TODO: Add tests and remove this quite questionable behavior.
+    # Or make it work on a flag, and add logging.
     if pattern is None:
         return linked_page.get_browseable_url()
 
-    subs = front_matter(ctx["page"], config)
-
-    subs["baseurl"] = config["baseurl"]
-
-    # The link needs default values for when there's no
-    # published_at date or no categories
-
-    return pattern.substitute(subs)
-
-
-def __page_link_subs(page: block.PageBlock, config: Config, fm) -> dict:
-    return {**front_matter, "baseurl": config["baseurl"]}
+    return build_page_url(linked_page, pattern, config)
 
 
 @contextfilter
@@ -171,8 +164,11 @@ def __linked_page_title(ctx: Context, b: block.TextBlock) -> str:
     return __get_linked_page(ctx, __linked_page_id(b)).title
 
 
+#
 # Jinja Tests
 #
+
+
 def __is_notion_link(b: block.TextBlock) -> bool:
     "Jinja test. Returns true if the block raw title property has a Notion link in it."
     if b.title == "" or b.title is None:
