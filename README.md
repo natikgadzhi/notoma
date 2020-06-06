@@ -21,11 +21,17 @@ Write articles for your static gen blog in Notion.
 ---
 ## Install
 
-Notoma is available via Pip ~~and Homebrew~~: 
+Notoma is available via Pip or Homebrew: 
 
 ```bash
 # Installing with pip, use this if you plan using Notoma as a python library.
 pip install notoma
+```
+
+Installing with Homebrew on Mac OS.
+
+```bash
+brew install xnutsive/notoma/notoma
 ```
 
 ---
