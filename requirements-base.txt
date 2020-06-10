@@ -1,8 +1,8 @@
--i https://pypi.org/simple
+-i https://pypi.org/simple/
 beautifulsoup4==4.9.1
 bs4==0.0.1
 cached-property==1.5.1
-certifi==2020.4.5.1
+certifi==2020.4.5.2
 chardet==3.0.4
 click==7.1.2
 commonmark==0.9.1
