@@ -1,0 +1,14 @@
+name: Homebrew
+on: [push, pull_request]
+
+jobs:
+  install-and-run:
+    name: "brew install and test"
+    runs-on: macos-latest
+    steps:
+
+    - name: Install Notoma
+      run: brew install xnutsive/notoma/notoma
+
+    - name: Verify version
+      run: notoma version

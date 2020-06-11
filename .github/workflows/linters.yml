@@ -3,7 +3,7 @@ on: [push, pull_request]
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
-    strategy: 
+    strategy:
       matrix:
         python: ["3.6", "3.7", "3.8"]
     steps:
