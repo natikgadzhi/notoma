@@ -58,7 +58,7 @@ def _get_metadata(notebook: list) -> dict:
 
 
 def _convert_nb_to_md(
-    fname: Union[str, Path], dest: Union[str, Path], front_matter: bool = True,
+    fname: Union[str, Path], dest: Union[str, Path], front_matter: bool = True
 ) -> None:
     """
     Converts a Jupyter Notebook in `fname` to a Jekyll-compatible Markdown file
