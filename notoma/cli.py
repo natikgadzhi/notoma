@@ -12,6 +12,7 @@ from .core import (
     draft_pages,
 )
 from . import __version__
+from .logging import logger, set_log_level_from_option
 
 """
 `cli` Module only has thin wrappers around Notoma Python API
@@ -27,12 +28,16 @@ Run `notoma` for the help article on how to use the CLI.
     help="""Build your staticg gen blog with Notion.
     Notoma converts Notion database of blog posts into a directory of .md files."""
 )
-def runner() -> None:
+@click.option("--debug", is_flag=True, default=False, help="Enable debug output.")
+def runner(debug: bool = False) -> None:
+    logger.info("Notoma CLI invoked.")
+    set_log_level_from_option(logger, debug)
     pass
 
 
 @runner.command(help="Print Notoma version.")
 def version():
+    logger.info(f"Printing Notoma version: {__version__}")
     click.echo(f"Notoma {__version__}")
 
 
@@ -54,11 +59,9 @@ def version():
 )
 @click.option("--token_v2", "-t", help="Notion auth token from the cookie.")
 @click.option("--verbose", is_flag=True, default=False, help="Verbose output.")
-@click.option("--debug", is_flag=True, default=False, help="Enable debug output.")
 def convert(
     dest: str,
     drafts: str,
-    debug: bool = False,
     verbose: bool = False,
     token_v2: str = None,
     notion_url: str = None,
@@ -85,6 +88,8 @@ def watch() -> None:
     """
     Watch for updates in the Notion Blog and update the Markdown posts
     """
+    logger.info("Invoking Watch command.")
+    logger.error("Watch is not implemented.")
     raise NotImplementedError("Watcher is not implemented yet.")
 
 
@@ -102,6 +107,7 @@ def __convert_pages(
     "Convert a bunch of pages with a nice progress bar."
 
     if verbose:
+        logger.info(f"{len(pages)} pages to process.")
         click.echo(f"{len(pages)} pages to process.")
 
     with click.progressbar(pages) as bar:
@@ -134,3 +140,7 @@ def __validate_config(config: Config) -> None:
         for e in errors:
             click.echo(e)
         raise click.Abort()
+
+
+def __log(message: str) -> None:
+    "Logs a message"
