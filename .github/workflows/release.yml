@@ -1,0 +1,13 @@
+name: Release on Tags
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  live-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test if this thing runs
+        run: echo "test!" && exit 0
