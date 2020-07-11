@@ -1,16 +1,14 @@
-name: Linters
+name: Lint
 on: [push, pull_request]
+
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ["3.6", "3.7", "3.8"]
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-python@v1
       with:
-        python-version: ${{matrix.python}}
+        python-version: '3.8'
         architecture: 'x64'
 
     - name: Install dev dependencies
@@ -18,11 +16,11 @@ jobs:
         pip install poetry
         poetry install
 
-    - name: Lint the code
-      run: |
-        poetry run flake8
-        poetry run black .
+    - name: flake8
+      run: poetry run flake8
 
-    - name: Lint notebooks
-      run: |
-        make nbexec
+    - name: black
+      run: poetry run black .
+
+    - name: nbexec
+      run: make nbexec
