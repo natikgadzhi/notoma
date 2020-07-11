@@ -15,13 +15,13 @@ jobs:
 
     - name: Install dev dependencies
       run: |
-        pip install pipenv
-        pipenv install --dev
+        pip install poetry
+        poetry install
 
     - name: Lint the code
       run: |
-        pipenv run flake8
-        pipenv run black .
+        poetry run flake8
+        poetry run black .
 
     - name: Lint notebooks
       run: |
