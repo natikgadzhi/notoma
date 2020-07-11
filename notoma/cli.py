@@ -11,7 +11,7 @@ from .core import (
     published_pages,
     draft_pages,
 )
-from .version import __version__
+from . import __version__
 
 """
 `cli` Module only has thin wrappers around Notoma Python API

@@ -1,7 +1,0 @@
-include LICENSE
-include CONTRIBUTING.md
-include README.md
-include requirements-base.txt
-include requirements-dev.txt
-include .env.sample
-recursive-exclude * __pycache__

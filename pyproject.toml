@@ -1,8 +1,30 @@
 [tool.poetry]
 name = "notoma"
-version = "0.2.2"
-description = ""
+version = "0.2.1"
+description = "Write and publish your blog articles from Notion."
 authors = ["Nate Gadzhibalaev <nate@respawn.io>"]
+
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://xnutsive.github.io/notoma"
+repository = "https://github.com/xnutsive/notoma"
+keywords = ["Notion", "blog", "markdown"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Typing :: Typed"
+]
+
+# What files from the repo to include in the package
+include = ["LICENSE", "CONTRIBUTING.md", "README.md", ".env.sample"]
+
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+notoma-dev = "notoma.dev:cli"
+notoma = "notoma.cli:runner"
 
 
 [tool.poetry.dependencies]
@@ -11,7 +33,7 @@ notion = ">=0.0.25"
 python-dotenv = "*"
 click = "*"
 jinja2 = "*"
-
+importlib-metadata = {version = "^1.0", python = "<3.8"}
 
 [tool.poetry.dev-dependencies]
 pre-commit = "*"
