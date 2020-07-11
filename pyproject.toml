@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "notoma"
-version = "0.2.1"
+version = "0.2.2"
 description = "Write and publish your blog articles from Notion."
 authors = ["Nate Gadzhibalaev <nate@respawn.io>"]
 
@@ -17,10 +17,6 @@ classifiers = [
 
 # What files from the repo to include in the package
 include = ["LICENSE", "CONTRIBUTING.md", "README.md", ".env.sample"]
-
-[build-system]
-requires = ["poetry_core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 notoma-dev = "notoma.dev:cli"
@@ -64,3 +60,7 @@ exclude = '''
   | dist
 )/
 '''
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
