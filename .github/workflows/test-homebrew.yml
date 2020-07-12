@@ -1,5 +1,9 @@
 name: Homebrew
-on: [push, pull_request]
+
+on: 
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   install-and-run:
@@ -8,7 +12,22 @@ jobs:
     steps:
 
     - name: Install Notoma
+      id: install
       run: brew install xnutsive/notoma/notoma
 
     - name: Verify version
-      run: notoma version
+      id: version
+      run: |
+        NOTOMA_VERSION=$(notoma version)
+        echo "::set-output name=version::$NOTOMA_VERSION"
+
+    - name: Extract git tag
+      id: git-tag
+      run: |
+        echo "::set-output name=version::${GITHUB_REF#refs/tags/v}"
+
+    - name: Verify versions are equal
+      id: verify
+      run: |
+        echo "brew version: " ${{steps.version.ouputs.version}}
+        echo "tag: " ${{steps.git-tag.outputs.version}}
