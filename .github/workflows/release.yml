@@ -36,7 +36,8 @@ jobs:
       id: build-release
       run: |
         poetry build
-        echo "::set-env name=NOTOMA_RELEASE_TAG:::${{github.ref}}"
+        echo "::set-env name=NOTOMA_RELEASE_TAG::${{github.ref}}"
+        echo "::set-env name=NOTOMA_RELEASE_VERSION::${NOTOMA_RELEASE_TAG:1}"
         echo "::set-env name=NOTOMA_RELEASE_NAME::notoma-${NOTOMA_RELEASE_TAG:1}.tar.gz"
         echo "::set-env name=NOTOMA_RELEASE_PATH::dist/$NOTOMA_RELEASE_NAME"
 
@@ -50,6 +51,9 @@ jobs:
       id: release-drafter
       with:
         publish: true
+        tag: ${{ github.ref }}
+        name: ${{ github.ref }}
+        version: ${{ env.NOTOMA_RELEASE_VERSION }}
         # TODO: Add a check for *-pre in tag ref and use that as prerelease: input
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

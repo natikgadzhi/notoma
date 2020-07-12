@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "notoma"
-version = "0.2.3"
+version = "0.2.4"
 description = "Write and publish your blog articles from Notion."
 authors = ["Nate Gadzhibalaev <nate@respawn.io>"]
 
