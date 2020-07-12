@@ -6,8 +6,70 @@ on:
       - 'v*'
 
 jobs:
-  live-check:
+  runs:
     runs-on: ubuntu-latest
     steps:
-      - name: Test if this thing runs
-        run: echo "test!" && exit 0
+
+    # First off, we'll build the release and make sure we have the release
+    # tarball ready to go.
+    # To do this, we'll:
+    # 1. Checkout the code
+    # 2. Install python
+    # 3. Install Notoma dependencies, including poetry
+    # 4. Build the release to ./dist/
+    #
+    # Note that we're not running linters or tests here on purpose to keep 
+    # this workflow simple for now.
+    #
+    - uses: actions/checkout@v1
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.8'
+        architecture: 'x64'
+
+    - name: Install dev dependencies
+      run: |
+        pip install poetry
+        poetry install
+
+    - name: Build Tarball
+      id: build-release
+      run: poetry build
+
+    # If the release build was successful, we can continue:
+    #   - We'll mark the draft release as published
+    #     and update it with any other PRs that have been merged.
+    #   - We'll upload the tarball as the release asset.
+    #
+    - uses: release-drafter/release-drafter@v5
+      id: release-drafter
+      with:
+        publish: true
+        # TODO: Add a check for *-pre in tag ref and use that as prerelease: input
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: "Debug: echo tarball asset name"
+      run: |
+        ls ./dist/
+        echo "dist/notoma-${{github.ref[1:]}}.tar.gz"
+
+    - name: Upload Release Tarball
+      id: upload-release-tarball
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.release-drafter.outputs.upload_url }}
+        asset_path: dist/notoma-${{ github.ref[1:] }}.tar.gz
+        asset_name: notoma-${{ github.ref[1:] }}.tar.gz
+        asset_content_type: application/x-gzip
+
+    #32 TODO: add a step to upload to pypi
+    # This will require storing pypi credentials as Github secrets
+    # and then using them as inputs env variables (?) to pass to poetry.
+
+    #33 TODO: Automate homebrew releases.
+    # Add a step to trigger the notoma-homebrew repo's own workflow
+    # that would update to the new Notoma's version from pypi, and
+    # update it's version.

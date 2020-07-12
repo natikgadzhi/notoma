@@ -2,7 +2,7 @@ name: Lint
 on: [push, pull_request]
 
 jobs:
-  build-and-run:
+  checkout-and-lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
