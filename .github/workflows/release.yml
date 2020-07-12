@@ -36,10 +36,11 @@ jobs:
       id: build-release
       run: |
         poetry build
-        echo "::set-env name=NOTOMA_RELEASE_TAG::${{github.ref}}"
-        echo "::set-env name=NOTOMA_RELEASE_VERSION::${NOTOMA_RELEASE_TAG:1}"
-        echo "::set-env name=NOTOMA_RELEASE_NAME::notoma-${NOTOMA_RELEASE_TAG:1}.tar.gz"
-        echo "::set-env name=NOTOMA_RELEASE_PATH::dist/$NOTOMA_RELEASE_NAME"
+
+        echo "::set-output name=GIT_TAG::${GITHUB_REF#refs/tags/}"
+        echo "::set-output name=NOTOMA_VERSION::${GITHUB_REF#refs/tags/v}"
+        echo "::set-output name=NOTOMA_RELEASE_NAME::notoma-${GITHUB_REF#refs/tags/}"
+        echo "::set-output name=NOTOMA_RELEASE_PATH::dist/${GITHUB_REF#refs/tags/}.tar.gz"
 
 
     # If the release build was successful, we can continue:
@@ -51,18 +52,12 @@ jobs:
       id: release-drafter
       with:
         publish: true
-        tag: ${{ github.ref }}
-        name: ${{ github.ref }}
-        version: ${{ env.NOTOMA_RELEASE_VERSION }}
+        tag: ${{ steps.build-release.outputs.GIT_TAG }}
+        name: ${{ steps.build-release.outputs.NOTOMA_RELEASE_NAME }}
+        version: ${{ steps.build-reelease.outputs.NOTOMA_VERSION }}
         # TODO: Add a check for *-pre in tag ref and use that as prerelease: input
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: "Debug: echo tarball asset name"
-      run: |
-        ls ./dist/
-        echo $NOTOMA_RELEASE_PATH
-        echo ${{ env.NOTOMA_RELEASE_PATH }}
 
     - name: Upload Release Tarball
       id: upload-release-tarball
@@ -71,8 +66,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.release-drafter.outputs.upload_url }}
-        asset_path: ${{ env.NOTOMA_RELEASE_PATH }}
-        asset_name: ${{ env.NOTOMA_RELEASE_NAME }}
+        asset_path: ${{ steps.build-release.outputs.NOTOMA_RELEASE_PATH }}
+        asset_name: ${{ steps.build-release.outputs.NOTOMA_RELEASE_NAME }}
         asset_content_type: application/x-gzip
 
     #32 TODO: add a step to upload to pypi
