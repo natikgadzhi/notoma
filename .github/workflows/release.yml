@@ -39,8 +39,8 @@ jobs:
 
         echo "::set-output name=GIT_TAG::${GITHUB_REF#refs/tags/}"
         echo "::set-output name=NOTOMA_VERSION::${GITHUB_REF#refs/tags/v}"
-        echo "::set-output name=NOTOMA_RELEASE_NAME::notoma-${GITHUB_REF#refs/tags/}"
-        echo "::set-output name=NOTOMA_RELEASE_PATH::dist/${GITHUB_REF#refs/tags/}.tar.gz"
+        echo "::set-output name=NOTOMA_RELEASE_NAME::notoma-${GITHUB_REF#refs/tags/v}"
+        echo "::set-output name=NOTOMA_RELEASE_PATH::dist/notoma-${GITHUB_REF#refs/tags/v}.tar.gz"
 
 
     # If the release build was successful, we can continue:
