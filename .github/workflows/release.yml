@@ -72,7 +72,7 @@ jobs:
       with:
         upload_url: ${{ steps.release-drafter.outputs.upload_url }}
         asset_path: ${{ steps.build-release.outputs.NOTOMA_RELEASE_PATH }}
-        asset_name: ${{ steps.build-release.outputs.NOTOMA_RELEASE_NAME }}
+        asset_name: ${{ steps.build-release.outputs.NOTOMA_RELEASE_NAME }}.tar.gz
         asset_content_type: application/x-gzip
 
     #32 TODO: add a step to upload to pypi
