@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  runs:
+  build-and-release:
     runs-on: ubuntu-latest
     steps:
 
@@ -18,7 +18,7 @@ jobs:
     # 3. Install Notoma dependencies, including poetry
     # 4. Build the release to ./dist/
     #
-    # Note that we're not running linters or tests here on purpose to keep 
+    # Note that we're not running linters or tests here on purpose to keep
     # this workflow simple for now.
     #
     - uses: actions/checkout@v1
@@ -34,7 +34,12 @@ jobs:
 
     - name: Build Tarball
       id: build-release
-      run: poetry build
+      run: |
+        poetry build
+        echo "::set-env name=NOTOMA_RELEASE_TAG:::${{github.ref}}"
+        echo "::set-env name=NOTOMA_RELEASE_NAME::notoma-${NOTOMA_RELEASE_TAG:1}.tar.gz"
+        echo "::set-env name=NOTOMA_RELEASE_PATH::dist/$NOTOMA_RELEASE_NAME"
+
 
     # If the release build was successful, we can continue:
     #   - We'll mark the draft release as published
@@ -52,7 +57,8 @@ jobs:
     - name: "Debug: echo tarball asset name"
       run: |
         ls ./dist/
-        echo "dist/notoma-${{github.ref[1:]}}.tar.gz"
+        echo $NOTOMA_RELEASE_PATH
+        echo ${{ env.NOTOMA_RELEASE_PATH }}
 
     - name: Upload Release Tarball
       id: upload-release-tarball
@@ -61,8 +67,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.release-drafter.outputs.upload_url }}
-        asset_path: dist/notoma-${{ github.ref[1:] }}.tar.gz
-        asset_name: notoma-${{ github.ref[1:] }}.tar.gz
+        asset_path: ${{ env.NOTOMA_RELEASE_PATH }}
+        asset_name: ${{ env.NOTOMA_RELEASE_NAME }}
         asset_content_type: application/x-gzip
 
     #32 TODO: add a step to upload to pypi
