@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
+
 import click
+import requests
 
 from .config import Config
 from .core import (
@@ -12,7 +14,10 @@ from .core import (
     draft_pages,
 )
 from . import __version__
-from .logging import logger, set_log_level_from_option
+from .logging import get_logger, toggle_debug, LOG_FILE_HANDLER, LOG_FMT
+from logging import INFO, DEBUG, ERROR
+
+logger = get_logger(INFO, LOG_FILE_HANDLER, LOG_FMT)
 
 """
 `cli` Module only has thin wrappers around Notoma Python API
@@ -25,20 +30,21 @@ Run `notoma` for the help article on how to use the CLI.
 # The CLI runner
 #
 @click.group(
-    help="""Build your staticg gen blog with Notion.
-    Notoma converts Notion database of blog posts into a directory of .md files."""
+    help="""
+    Build your staticg gen blog with Notion.
+    Notoma converts Notion database of blog posts into a directory of .md files.
+    """
 )
 @click.option("--debug", is_flag=True, default=False, help="Enable debug output.")
 def runner(debug: bool = False) -> None:
     logger.info("Notoma CLI invoked.")
-    set_log_level_from_option(logger, debug)
+    toggle_debug(logger, debug)
     pass
 
 
 @runner.command(help="Print Notoma version.")
 def version():
-    logger.info(f"Printing Notoma version: {__version__}")
-    click.echo(f"Notoma {__version__}")
+    __echo_and_log(f"Notoma {__version__}")
 
 
 @runner.command(help="Convert Notion Blog to Markdown files.")
@@ -58,13 +64,8 @@ def version():
     help="Directory for draft posts. Drafts won't be imported if this is left blank.",
 )
 @click.option("--token_v2", "-t", help="Notion auth token from the cookie.")
-@click.option("--verbose", is_flag=True, default=False, help="Verbose output.")
 def convert(
-    dest: str,
-    drafts: str,
-    verbose: bool = False,
-    token_v2: str = None,
-    notion_url: str = None,
+    dest: str, drafts: str, token_v2: str = None, notion_url: str = None,
 ) -> None:
     config = Config(token_v2=token_v2, blog_url=notion_url)
     __validate_config(config)
@@ -73,14 +74,16 @@ def convert(
     client = notion_client(config.token_v2)
     blog = notion_blog_database(client, config.blog_url)
 
-    if verbose:
-        click.echo(f"Processing articles from Notion: {blog.parent.title}")
+    __echo_and_log(f"Processing articles from Notion: {blog.parent.title}")
 
-    __convert_pages(published_pages(blog), dest, config, verbose)
+    try:
+        __convert_pages(published_pages(blog), dest, config)
+        if drafts:
+            __convert_pages(draft_pages(blog), Path(drafts).absolute(), config)
+            draft_pages(blog)
 
-    if drafts:
-        __convert_pages(draft_pages(blog), Path(drafts).absolute(), config, verbose)
-        draft_pages(blog)
+    except requests.exceptions.HTTPError as e:
+        __echo_and_log(e, ERROR)
 
 
 @runner.command()
@@ -89,8 +92,10 @@ def watch() -> None:
     Watch for updates in the Notion Blog and update the Markdown posts
     """
     logger.info("Invoking Watch command.")
-    logger.error("Watch is not implemented.")
-    raise NotImplementedError("Watcher is not implemented yet.")
+
+    error = NotImplementedError("Watcher is not implemented yet.")
+    logger.error("Watch is not implemented.", error)
+    raise error
 
 
 @runner.command()
@@ -98,26 +103,26 @@ def new() -> None:
     """
     Create a new Notion Blog
     """
-    raise NotImplementedError("Creating a new blog is not implemented yet.")
+    logger.info("Invoking Watch command.")
+
+    error = NotImplementedError("Creating a new blog is not implemented yet.")
+    logger.error("Watch is not implemented.", error)
+    raise error
 
 
-def __convert_pages(
-    pages: list, dest_dir: Path, config: Config, verbose: bool = False
-) -> None:
+def __convert_pages(pages: list, dest_dir: Path, config: Config) -> None:
     "Convert a bunch of pages with a nice progress bar."
 
-    if verbose:
-        logger.info(f"{len(pages)} pages to process.")
-        click.echo(f"{len(pages)} pages to process.")
+    __echo_and_log(f"{len(pages)} pages to process.")
 
     with click.progressbar(pages) as bar:
         for page in bar:
-            page_path(page, dest_dir=dest_dir).write_text(
-                page_to_markdown(page, config=config)
-            )
+            path = page_path(page, dest_dir=dest_dir)
+            page_markdown = page_to_markdown(page, config=config)
+            path.write_text(page_markdown)
+            logger.info(f"Processed page {page.title} and saved to {path}.")
 
-    if verbose:
-        click.echo(f"Processed {len(pages)} pages.")
+    __echo_and_log(f"Processed {len(pages)} pages.")
 
 
 def __validate_config(config: Config) -> None:
@@ -128,19 +133,20 @@ def __validate_config(config: Config) -> None:
     errors = list()
     if config.token_v2 is None:
         errors.append(
-            "Error: Authentication token `token_v2` is not provided. Try --token option."
+            "Error: Authentication token `token_v2` required. Try --token option."
         )
 
     if config.blog_url is None:
-        errors.append(
-            "Error: Notion Blog Database URL not provided. Try --from option."
-        )
+        errors.append("Error: Notion Blog URL is required. Try --from option.")
 
     if len(errors) > 0:
         for e in errors:
-            click.echo(e)
+            __echo_and_log(e, ERROR)
         raise click.Abort()
 
 
-def __log(message: str) -> None:
-    "Logs a message"
+def __echo_and_log(message: str, loglevel=INFO) -> None:
+    "Echo the message, and add it to the log with loglevel."
+    if logger.level <= loglevel:
+        click.echo(message)
+    logger.log(loglevel, message)
