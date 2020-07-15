@@ -22,7 +22,6 @@ include = ["LICENSE", "CONTRIBUTING.md", "README.md", ".env.sample"]
 notoma-dev = "notoma.dev:cli"
 notoma = "notoma.cli:runner"
 
-
 [tool.poetry.dependencies]
 python = ">=3.6"
 notion = ">=0.0.25"
@@ -41,7 +40,6 @@ jupyter_contrib_nbextensions = "*"
 nbconvert = "*"
 nbformat = "*"
 nbexec = "*"
-twine = "*"
 
 
 [tool.black]
@@ -60,6 +58,7 @@ exclude = '''
   | dist
 )/
 '''
+
 [build-system]
 requires = ["poetry_core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
