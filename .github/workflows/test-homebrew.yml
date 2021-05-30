@@ -13,7 +13,7 @@ jobs:
 
     - name: Install Notoma
       id: install
-      run: brew install nategadzi/notoma/notoma
+      run: brew install nategadzhi/notoma/notoma
 
     - name: Verify version
       id: version

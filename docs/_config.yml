@@ -6,7 +6,7 @@ permalink: /:categories/:title
 # Aux links for the upper right navigation
 aux_links:
   "Notoma on Gibhub":
-    - "//github.com/nategadzi/notoma"
+    - "//github.com/nategadzhi/notoma"
 
 # Footer content appears at the bottom of every page's main content
 footer_content: |
