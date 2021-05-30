@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "notoma"
-version = "0.2.7"
+version = "0.2.8"
 description = "Write and publish your blog articles from Notion."
 authors = ["Nate Gadzhibalaev <nate@respawn.io>"]
 
 license = "Apache-2.0"
 readme = "README.md"
-homepage = "https://xnutsive.github.io/notoma"
-repository = "https://github.com/xnutsive/notoma"
+homepage = "https://nategadzhi.github.io/notoma"
+repository = "https://github.com/nategadzhi/notoma"
 keywords = ["Notion", "blog", "markdown"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -23,7 +23,7 @@ notoma-dev = "notoma.dev:cli"
 notoma = "notoma.cli:runner"
 
 [tool.poetry.dependencies]
-python = ">=3.6"
+python = ">=3.8"
 notion = ">=0.0.25"
 python-dotenv = "*"
 click = "*"
@@ -33,7 +33,7 @@ importlib-metadata = {version = "^1.0", python = "<3.8"}
 [tool.poetry.dev-dependencies]
 pre-commit = "*"
 black = { version = "*", allow-prereleases = true }
-flake8 = "*" 
+flake8 = "*"
 
 jupyter = "*"
 jupyter_contrib_nbextensions = "*"

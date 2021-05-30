@@ -11,7 +11,7 @@ File to edit instead: notebooks/contributing.ipynb
 
 # Contributing
 
-Contributions are very welcome — please do ask questions and suggest ideas in [Issues](https://github.com/xnutsive/notoma/issues), and feel free to implement features you want and submit them via Pull Requests.
+Contributions are very welcome — please do ask questions and suggest ideas in [Issues](https://github.com/nategadzi/notoma/issues), and feel free to implement features you want and submit them via Pull Requests.
 
 ### Reporting issues
 
@@ -21,7 +21,7 @@ Please feel free to file a Github Issue if you found a behavior that you feel is
 
 ### How to participate
 
-Notoma uses a [project board to keep track of what we're currently working on](https://github.com/xnutsive/notoma/projects/4).
+Notoma uses a [project board to keep track of what we're currently working on](https://github.com/nategadzi/notoma/projects/4).
 
 We're trying to mark issues that are small enough, and would onboard you into Notoma's internal workings with `good-first-issue` label. That said, feel free to comment on any issue that you'd like to work on, as long as it's not assigned and not in the ”In progress“ column yet. 
 
@@ -43,7 +43,7 @@ Here's the steps you'd need to do in order to get your code merged:
 #### Local dev setup
 
 ```bash
-git clone git@github.com:xnutsive/notoma.git
+git clone git@github.com:nategadzi/notoma.git
 hub fork #or whatever
 
 make contrib #will install dev dependencies and setup local pre-commit linters.
@@ -53,14 +53,14 @@ make contrib #will install dev dependencies and setup local pre-commit linters.
 
 - [`black`](https://github.com/psf/black) for code formatting
 - [`flake8`](https://gitlab.com/pycqa/flake8) for linting
-- [Code Climate](https://codeclimate.com/github/xnutsive/notoma) for code quality.
+- [Code Climate](https://codeclimate.com/github/nategadzi/notoma) for code quality.
 
 Linters are run automatically on each commit to any branch, and on pull requests as well.
 
 
 #### Updating documentation
 
-[Documentation website](https://xnutsive.github.io/notoma/) and all of it's docs is just a Jekyll site, located in [`./docs/`](https://github.com/xnutsive/notoma/tree/master/docs). The markdown files in there are automatically generated from Jupyter Notebooks in `./notebooks` in this repo.
+[Documentation website](https://nategadzi.github.io/notoma/) and all of it's docs is just a Jekyll site, located in [`./docs/`](https://github.com/nategadzi/notoma/tree/master/docs). The markdown files in there are automatically generated from Jupyter Notebooks in `./notebooks` in this repo.
 
 Please edit the notebooks, not the markdown files directly, and please include proposed documentation changes with your pull requests.
 
