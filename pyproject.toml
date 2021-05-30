@@ -40,6 +40,7 @@ jupyter_contrib_nbextensions = "*"
 nbconvert = "*"
 nbformat = "*"
 nbexec = "*"
+twine = "^3.4.1"
 
 
 [tool.black]
