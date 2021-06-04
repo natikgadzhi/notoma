@@ -28,7 +28,7 @@ notion = ">=0.0.25"
 python-dotenv = "*"
 click = "*"
 jinja2 = "*"
-importlib-metadata = {version = "^1.0", python = "<3.8"}
+importlib-metadata = {version = ">=1,<5", python = "<3.8"}
 
 [tool.poetry.dev-dependencies]
 pre-commit = "*"
