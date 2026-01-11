@@ -21,10 +21,9 @@ import (
 )
 
 var (
-	dryRun  bool
-	force   bool
-	verbose bool
-	quiet   bool
+	dryRun bool
+	force  bool
+	quiet  bool // quiet disables TUI and shows plain log output
 )
 
 // syncContext holds dependencies for sync operations, reducing parameter count.

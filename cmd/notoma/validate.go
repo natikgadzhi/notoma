@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var validateVerbose bool
-
 var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate configuration and Notion connectivity",
@@ -33,7 +31,7 @@ This command performs the following checks:
 
 func init() {
 	validateCmd.Flags().StringVarP(&configPath, "config", "c", "config.yaml", "path to config file")
-	validateCmd.Flags().BoolVarP(&validateVerbose, "verbose", "v", false, "enable verbose logging")
+	validateCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "enable verbose logging")
 }
 
 // ValidationResult holds the result of a single validation check.
@@ -46,7 +44,7 @@ type ValidationResult struct {
 // runValidate performs all validation checks and reports results.
 func runValidate(cmd *cobra.Command, args []string) error {
 	// Set up logging and signal handling
-	logger := setupLogger(nil, validateVerbose)
+	logger := setupLogger(nil, verbose)
 	ctx, cancel := setupSignalHandler(logger)
 	defer cancel()
 

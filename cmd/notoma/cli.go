@@ -14,6 +14,7 @@ import (
 // Shared flag variables for all commands.
 var (
 	configPath string
+	verbose    bool
 )
 
 // setupLogger creates and sets the default logger.
