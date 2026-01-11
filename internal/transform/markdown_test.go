@@ -105,6 +105,45 @@ func TestHeadingBlocks(t *testing.T) {
 	}
 }
 
+func TestToggleableHeadingWithChildren(t *testing.T) {
+	fetcher := &mockFetcher{
+		children: map[string][]notionapi.Block{
+			"heading-id": {
+				&notionapi.ParagraphBlock{
+					BasicBlock: notionapi.BasicBlock{Type: notionapi.BlockTypeParagraph},
+					Paragraph:  notionapi.Paragraph{RichText: newRichText("Hidden content under heading")},
+				},
+			},
+		},
+	}
+
+	block := &notionapi.Heading1Block{
+		BasicBlock: notionapi.BasicBlock{
+			Object:      "block",
+			ID:          "heading-id",
+			Type:        notionapi.BlockTypeHeading1,
+			HasChildren: true,
+		},
+		Heading1: notionapi.Heading{
+			RichText:     newRichText("Expandable Section"),
+			IsToggleable: true,
+		},
+	}
+
+	transformer := NewTransformer(context.Background(), fetcher)
+	result, err := transformer.BlocksToMarkdown([]notionapi.Block{block})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(result, "[!faq]- Expandable Section") {
+		t.Errorf("expected toggleable heading title, got %q", result)
+	}
+	if !strings.Contains(result, "Hidden content under heading") {
+		t.Errorf("expected toggleable heading content, got %q", result)
+	}
+}
+
 func TestListBlocks(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -65,13 +65,13 @@ func (t *Transformer) blockToMarkdown(block notionapi.Block, indent int) (string
 		return t.paragraphToMarkdown(b, indentStr)
 
 	case *notionapi.Heading1Block:
-		return t.headingToMarkdown(b.Heading1.RichText, 1, b.Heading1.IsToggleable, indentStr)
+		return t.heading1ToMarkdown(b, indentStr)
 
 	case *notionapi.Heading2Block:
-		return t.headingToMarkdown(b.Heading2.RichText, 2, b.Heading2.IsToggleable, indentStr)
+		return t.heading2ToMarkdown(b, indentStr)
 
 	case *notionapi.Heading3Block:
-		return t.headingToMarkdown(b.Heading3.RichText, 3, b.Heading3.IsToggleable, indentStr)
+		return t.heading3ToMarkdown(b, indentStr)
 
 	case *notionapi.BulletedListItemBlock:
 		return t.bulletedListItemToMarkdown(b, indentStr)
@@ -190,17 +190,67 @@ func (t *Transformer) paragraphToMarkdown(b *notionapi.ParagraphBlock, indent st
 	return sb.String(), nil
 }
 
-// headingToMarkdown converts heading blocks.
-func (t *Transformer) headingToMarkdown(richText []notionapi.RichText, level int, isToggleable bool, indent string) (string, error) {
-	text := RichTextToMarkdown(richText)
-	prefix := strings.Repeat("#", level)
+// heading1ToMarkdown converts heading 1 blocks.
+func (t *Transformer) heading1ToMarkdown(b *notionapi.Heading1Block, indent string) (string, error) {
+	text := RichTextToMarkdown(b.Heading1.RichText)
 
-	if isToggleable {
-		// Convert toggleable heading to foldable callout
-		return fmt.Sprintf("%s> [!faq]- %s\n\n", indent, text), nil
+	if b.Heading1.IsToggleable {
+		return t.toggleableHeadingToMarkdown(string(b.ID), text, b.HasChildren, indent)
 	}
 
-	return fmt.Sprintf("%s%s %s\n\n", indent, prefix, text), nil
+	return fmt.Sprintf("%s# %s\n\n", indent, text), nil
+}
+
+// heading2ToMarkdown converts heading 2 blocks.
+func (t *Transformer) heading2ToMarkdown(b *notionapi.Heading2Block, indent string) (string, error) {
+	text := RichTextToMarkdown(b.Heading2.RichText)
+
+	if b.Heading2.IsToggleable {
+		return t.toggleableHeadingToMarkdown(string(b.ID), text, b.HasChildren, indent)
+	}
+
+	return fmt.Sprintf("%s## %s\n\n", indent, text), nil
+}
+
+// heading3ToMarkdown converts heading 3 blocks.
+func (t *Transformer) heading3ToMarkdown(b *notionapi.Heading3Block, indent string) (string, error) {
+	text := RichTextToMarkdown(b.Heading3.RichText)
+
+	if b.Heading3.IsToggleable {
+		return t.toggleableHeadingToMarkdown(string(b.ID), text, b.HasChildren, indent)
+	}
+
+	return fmt.Sprintf("%s### %s\n\n", indent, text), nil
+}
+
+// toggleableHeadingToMarkdown converts a toggleable heading to a foldable callout with children.
+func (t *Transformer) toggleableHeadingToMarkdown(blockID, title string, hasChildren bool, indent string) (string, error) {
+	var sb strings.Builder
+	sb.WriteString(indent + "> [!faq]- " + title + "\n")
+
+	// Fetch and render children
+	if hasChildren {
+		children, err := t.fetchChildren(blockID)
+		if err != nil {
+			return "", err
+		}
+		for _, child := range children {
+			childMd, err := t.blockToMarkdown(child, 0)
+			if err != nil {
+				return "", err
+			}
+			// Prefix each line with > for callout
+			lines := strings.Split(childMd, "\n")
+			for _, line := range lines {
+				if line != "" {
+					sb.WriteString(indent + "> " + line + "\n")
+				}
+			}
+		}
+	}
+	sb.WriteString("\n")
+
+	return sb.String(), nil
 }
 
 // bulletedListItemToMarkdown converts bulleted list items.
