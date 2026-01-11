@@ -18,7 +18,7 @@
 ## Progress
 
 - [x] **Phase 1:** Project scaffolding, CLI, config, Notion API connection, rate limiting
-- [ ] **Phase 2:** Block → Markdown transformation (all block types)
+- [x] **Phase 2:** Block → Markdown transformation (all block types)
 - [ ] **Phase 3:** Database → Obsidian Bases conversion
 - [ ] **Phase 4:** Attachments & incremental sync state
 - [ ] **Phase 5:** CI/CD, Docker, k8s manifests
