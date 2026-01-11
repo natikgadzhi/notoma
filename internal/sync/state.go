@@ -36,11 +36,37 @@ type ResourceState struct {
 	Entries      map[string]EntryState `json:"entries,omitempty"`
 }
 
+// AttachmentState tracks the sync state of a downloaded attachment.
+type AttachmentState struct {
+	// OriginalURL is the URL the attachment was downloaded from.
+	// Note: Notion URLs expire, so this is for reference only.
+	OriginalURL string `json:"original_url"`
+
+	// URLHash is a hash of the original URL for stable identification.
+	URLHash string `json:"url_hash"`
+
+	// ContentHash is the SHA-256 hash of the file content.
+	ContentHash string `json:"content_hash"`
+
+	// LocalPath is the path to the downloaded file.
+	LocalPath string `json:"local_path"`
+
+	// Size is the file size in bytes.
+	Size int64 `json:"size"`
+
+	// PageID is the ID of the page that references this attachment.
+	PageID string `json:"page_id,omitempty"`
+
+	// DownloadedAt is when the attachment was downloaded.
+	DownloadedAt time.Time `json:"downloaded_at"`
+}
+
 // SyncState is the top-level sync state persisted to disk.
 type SyncState struct {
-	Version      int                      `json:"version"`
-	LastSyncTime time.Time                `json:"last_sync_time"`
-	Resources    map[string]ResourceState `json:"resources"`
+	Version      int                         `json:"version"`
+	LastSyncTime time.Time                   `json:"last_sync_time"`
+	Resources    map[string]ResourceState    `json:"resources"`
+	Attachments  map[string]*AttachmentState `json:"attachments,omitempty"`
 }
 
 // StateVersion is the current schema version for the state file.
@@ -49,8 +75,9 @@ const StateVersion = 1
 // NewSyncState creates a new empty sync state.
 func NewSyncState() *SyncState {
 	return &SyncState{
-		Version:   StateVersion,
-		Resources: make(map[string]ResourceState),
+		Version:     StateVersion,
+		Resources:   make(map[string]ResourceState),
+		Attachments: make(map[string]*AttachmentState),
 	}
 }
 
@@ -80,6 +107,9 @@ func LoadState(path string) (*SyncState, error) {
 			state.Resources[id] = res
 		}
 	}
+	if state.Attachments == nil {
+		state.Attachments = make(map[string]*AttachmentState)
+	}
 
 	return &state, nil
 }
@@ -93,7 +123,7 @@ func SaveState(path string, state *SyncState) error {
 
 	// Ensure parent directory exists
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("creating state directory: %w", err)
 	}
 
@@ -108,7 +138,7 @@ func SaveState(path string, state *SyncState) error {
 
 	// Write atomically by using a temp file
 	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
 		return fmt.Errorf("writing state file: %w", err)
 	}
 
@@ -119,6 +149,11 @@ func SaveState(path string, state *SyncState) error {
 	}
 
 	return nil
+}
+
+// Save is an alias for SaveState that operates on the receiver.
+func (s *SyncState) Save(path string) error {
+	return SaveState(path, s)
 }
 
 // GetResource returns the state of a resource by ID, or nil if not found.

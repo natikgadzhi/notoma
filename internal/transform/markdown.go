@@ -16,8 +16,10 @@ type BlockFetcher interface {
 
 // Transformer converts Notion blocks to Obsidian-flavored markdown.
 type Transformer struct {
-	fetcher BlockFetcher
-	ctx     context.Context
+	fetcher              BlockFetcher
+	ctx                  context.Context
+	attachmentDownloader *AttachmentDownloader
+	downloadAttachments  bool
 }
 
 // NewTransformer creates a new block transformer.
@@ -26,6 +28,30 @@ func NewTransformer(ctx context.Context, fetcher BlockFetcher) *Transformer {
 		fetcher: fetcher,
 		ctx:     ctx,
 	}
+}
+
+// NewTransformerWithAttachments creates a transformer that downloads attachments.
+func NewTransformerWithAttachments(ctx context.Context, fetcher BlockFetcher, downloader *AttachmentDownloader) *Transformer {
+	return &Transformer{
+		fetcher:              fetcher,
+		ctx:                  ctx,
+		attachmentDownloader: downloader,
+		downloadAttachments:  downloader != nil,
+	}
+}
+
+// SetAttachmentDownloader sets the attachment downloader for the transformer.
+func (t *Transformer) SetAttachmentDownloader(downloader *AttachmentDownloader) {
+	t.attachmentDownloader = downloader
+	t.downloadAttachments = downloader != nil
+}
+
+// GetDownloadedAttachments returns all attachments downloaded during transformation.
+func (t *Transformer) GetDownloadedAttachments() map[string]*Attachment {
+	if t.attachmentDownloader == nil {
+		return nil
+	}
+	return t.attachmentDownloader.GetDownloaded()
 }
 
 // BlocksToMarkdown converts a slice of Notion blocks to markdown.
@@ -539,7 +565,16 @@ func (t *Transformer) imageToMarkdown(b *notionapi.ImageBlock, indent string) (s
 		caption = RichTextToPlain(b.Image.Caption)
 	}
 
-	// TODO: During actual sync, download image and update URL to local path
+	// Download attachment if downloader is available and URL is Notion-hosted
+	if t.downloadAttachments && IsNotionHosted(url) {
+		att, err := t.attachmentDownloader.Download(t.ctx, url, AttachmentTypeImage)
+		if err == nil && att != nil {
+			// Use local path for Obsidian
+			url = att.LocalPath
+		}
+		// On error, fall back to original URL (logged by downloader)
+	}
+
 	return indent + "![" + caption + "](" + url + ")\n\n", nil
 }
 
@@ -549,6 +584,14 @@ func (t *Transformer) videoToMarkdown(b *notionapi.VideoBlock, indent string) (s
 	caption := ""
 	if len(b.Video.Caption) > 0 {
 		caption = RichTextToPlain(b.Video.Caption)
+	}
+
+	// Download attachment if downloader is available and URL is Notion-hosted
+	if t.downloadAttachments && IsNotionHosted(url) {
+		att, err := t.attachmentDownloader.Download(t.ctx, url, AttachmentTypeVideo)
+		if err == nil && att != nil {
+			url = att.LocalPath
+		}
 	}
 
 	return indent + "![" + caption + "](" + url + ")\n\n", nil
@@ -562,7 +605,14 @@ func (t *Transformer) fileToMarkdown(b *notionapi.FileBlock, indent string) (str
 		caption = RichTextToPlain(b.File.Caption)
 	}
 
-	// TODO: During actual sync, download file and update URL to local path
+	// Download attachment if downloader is available and URL is Notion-hosted
+	if t.downloadAttachments && IsNotionHosted(url) {
+		att, err := t.attachmentDownloader.Download(t.ctx, url, AttachmentTypeFile)
+		if err == nil && att != nil {
+			url = att.LocalPath
+		}
+	}
+
 	return indent + "[" + caption + "](" + url + ")\n\n", nil
 }
 
@@ -574,7 +624,14 @@ func (t *Transformer) pdfToMarkdown(b *notionapi.PdfBlock, indent string) (strin
 		caption = RichTextToPlain(b.Pdf.Caption)
 	}
 
-	// TODO: During actual sync, download PDF and update URL to local path
+	// Download attachment if downloader is available and URL is Notion-hosted
+	if t.downloadAttachments && IsNotionHosted(url) {
+		att, err := t.attachmentDownloader.Download(t.ctx, url, AttachmentTypePDF)
+		if err == nil && att != nil {
+			url = att.LocalPath
+		}
+	}
+
 	return indent + "![" + caption + "](" + url + ")\n\n", nil
 }
 
@@ -584,6 +641,14 @@ func (t *Transformer) audioToMarkdown(b *notionapi.AudioBlock, indent string) (s
 	caption := "audio"
 	if len(b.Audio.Caption) > 0 {
 		caption = RichTextToPlain(b.Audio.Caption)
+	}
+
+	// Download attachment if downloader is available and URL is Notion-hosted
+	if t.downloadAttachments && IsNotionHosted(url) {
+		att, err := t.attachmentDownloader.Download(t.ctx, url, AttachmentTypeAudio)
+		if err == nil && att != nil {
+			url = att.LocalPath
+		}
 	}
 
 	return indent + "![" + caption + "](" + url + ")\n\n", nil

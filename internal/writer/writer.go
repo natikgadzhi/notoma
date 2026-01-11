@@ -96,3 +96,63 @@ func (w *Writer) EnsureFolder(folderPath string) error {
 
 	return nil
 }
+
+// WriteAttachment writes an attachment file to the attachment folder.
+// localPath is relative to the vault root (includes attachment folder).
+// Returns the full path to the written file.
+func (w *Writer) WriteAttachment(localPath string, data []byte) (string, error) {
+	fullPath := filepath.Join(w.vaultPath, localPath)
+
+	if w.dryRun {
+		w.logger.Info("would write attachment", "path", fullPath, "size", len(data))
+		return fullPath, nil
+	}
+
+	// Ensure directory exists
+	dir := filepath.Dir(fullPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", fmt.Errorf("creating attachment directory %s: %w", dir, err)
+	}
+
+	// Write file
+	if err := os.WriteFile(fullPath, data, 0o644); err != nil {
+		return "", fmt.Errorf("writing attachment %s: %w", fullPath, err)
+	}
+
+	w.logger.Debug("wrote attachment", "path", fullPath, "size", len(data))
+	return fullPath, nil
+}
+
+// AttachmentExists checks if an attachment file already exists.
+func (w *Writer) AttachmentExists(localPath string) bool {
+	fullPath := filepath.Join(w.vaultPath, localPath)
+	_, err := os.Stat(fullPath)
+	return err == nil
+}
+
+// DeleteAttachment removes an attachment file.
+func (w *Writer) DeleteAttachment(localPath string) error {
+	fullPath := filepath.Join(w.vaultPath, localPath)
+
+	if w.dryRun {
+		w.logger.Info("would delete attachment", "path", fullPath)
+		return nil
+	}
+
+	if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("deleting attachment %s: %w", fullPath, err)
+	}
+
+	w.logger.Debug("deleted attachment", "path", fullPath)
+	return nil
+}
+
+// GetVaultPath returns the vault path.
+func (w *Writer) GetVaultPath() string {
+	return w.vaultPath
+}
+
+// GetAttachmentFolder returns the attachment folder name.
+func (w *Writer) GetAttachmentFolder() string {
+	return w.attachmentFolder
+}

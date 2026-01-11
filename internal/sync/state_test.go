@@ -23,6 +23,9 @@ func TestNewSyncState(t *testing.T) {
 	if len(state.Resources) != 0 {
 		t.Errorf("expected empty Resources, got %d", len(state.Resources))
 	}
+	if state.Attachments == nil {
+		t.Error("expected non-nil Attachments map")
+	}
 }
 
 func TestLoadState_FileNotExists(t *testing.T) {
@@ -79,7 +82,7 @@ func TestLoadState_ValidFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to marshal state: %v", err)
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("failed to write state file: %v", err)
 	}
 
@@ -118,7 +121,7 @@ func TestLoadState_InvalidJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "invalid.json")
 
-	if err := os.WriteFile(path, []byte("not valid json"), 0644); err != nil {
+	if err := os.WriteFile(path, []byte("not valid json"), 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 
@@ -144,7 +147,7 @@ func TestLoadState_NilMaps(t *testing.T) {
 			}
 		}
 	}`)
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 
@@ -157,6 +160,11 @@ func TestLoadState_NilMaps(t *testing.T) {
 	db := state.Resources["db-1"]
 	if db.Entries == nil {
 		t.Error("expected Entries map to be initialized")
+	}
+
+	// Verify attachments map was initialized
+	if state.Attachments == nil {
+		t.Error("expected Attachments map to be initialized")
 	}
 }
 
