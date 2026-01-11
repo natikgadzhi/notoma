@@ -64,13 +64,6 @@ DOCKER_HUB_USERNAME=yourusername
 DOCKER_HUB_TOKEN=dckr_pat_xxx
 ```
 
-**.env** (do NOT commit — already in .gitignore):
-```bash
-NOTION_TOKEN=ntn_actualtoken
-DOCKER_HUB_USERNAME=natik
-DOCKER_HUB_TOKEN=dckr_pat_actualtoken
-```
-
 The tool loads secrets from:
 1. Environment variables (highest priority)
 2. `.env` file in current directory (for local dev)
@@ -599,5 +592,3 @@ The ID is a 32-character hex string (last segment before `?`). The tool should:
 1. Extract the 32-char ID from the URL
 2. Auto-detect type (page vs database) by querying the API
 3. Format as UUID if needed (8-4-4-4-12 pattern)
-
-
