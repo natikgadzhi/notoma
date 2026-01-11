@@ -8,6 +8,7 @@ notion-sync
 
 # Test binary
 *.test
+test-output/
 
 # Output of go coverage tool
 *.out
