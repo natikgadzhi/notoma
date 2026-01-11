@@ -8,7 +8,9 @@ on:
     branches: [main]
 
 env:
-  IMAGE_NAME: notion-sync
+  IMAGE_NAME: notoma
+  # Fallback registry for PRs when secrets aren't available
+  REGISTRY: ${{ secrets.DOCKER_HUB_USERNAME || 'local' }}
 
 jobs:
   build-and-push:
@@ -31,14 +33,14 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            type=sha,prefix=,format=long
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
