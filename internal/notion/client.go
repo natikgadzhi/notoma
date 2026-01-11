@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/jomei/notionapi"
 )
@@ -21,9 +22,10 @@ const (
 
 // Resource represents a Notion page or database with its metadata.
 type Resource struct {
-	ID    string
-	Type  ResourceType
-	Title string
+	ID             string
+	Type           ResourceType
+	Title          string
+	LastEditedTime time.Time
 }
 
 // Client wraps the Notion API client with rate limiting and convenience methods.
@@ -53,9 +55,10 @@ func (c *Client) DetectResourceType(ctx context.Context, id string) (*Resource, 
 	page, err := c.GetPage(ctx, id)
 	if err == nil {
 		return &Resource{
-			ID:    id,
-			Type:  ResourceTypePage,
-			Title: extractPageTitle(page),
+			ID:             id,
+			Type:           ResourceTypePage,
+			Title:          extractPageTitle(page),
+			LastEditedTime: time.Time(page.LastEditedTime),
 		}, nil
 	}
 
@@ -68,9 +71,10 @@ func (c *Client) DetectResourceType(ctx context.Context, id string) (*Resource, 
 	db, err := c.GetDatabase(ctx, id)
 	if err == nil {
 		return &Resource{
-			ID:    id,
-			Type:  ResourceTypeDatabase,
-			Title: extractDatabaseTitle(db),
+			ID:             id,
+			Type:           ResourceTypeDatabase,
+			Title:          extractDatabaseTitle(db),
+			LastEditedTime: time.Time(db.LastEditedTime),
 		}, nil
 	}
 
@@ -249,9 +253,10 @@ func (c *Client) DiscoverWorkspaceRoots(ctx context.Context) ([]Resource, error)
 		if page, ok := obj.(*notionapi.Page); ok {
 			if page.Parent.Type == notionapi.ParentTypeWorkspace {
 				roots = append(roots, Resource{
-					ID:    string(page.ID),
-					Type:  ResourceTypePage,
-					Title: extractPageTitle(page),
+					ID:             string(page.ID),
+					Type:           ResourceTypePage,
+					Title:          extractPageTitle(page),
+					LastEditedTime: time.Time(page.LastEditedTime),
 				})
 			}
 		}
@@ -261,9 +266,10 @@ func (c *Client) DiscoverWorkspaceRoots(ctx context.Context) ([]Resource, error)
 		if db, ok := obj.(*notionapi.Database); ok {
 			if db.Parent.Type == notionapi.ParentTypeWorkspace {
 				roots = append(roots, Resource{
-					ID:    string(db.ID),
-					Type:  ResourceTypeDatabase,
-					Title: extractDatabaseTitle(db),
+					ID:             string(db.ID),
+					Type:           ResourceTypeDatabase,
+					Title:          extractDatabaseTitle(db),
+					LastEditedTime: time.Time(db.LastEditedTime),
 				})
 			}
 		}

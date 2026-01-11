@@ -131,6 +131,13 @@ func runSync(cmd *cobra.Command, args []string) error {
 	// Create writer
 	w := writer.New(cfg.Output.VaultPath, cfg.Output.AttachmentFolder, dryRun, logger)
 
+	// Create attachment downloader if enabled
+	var attDownloader *transform.AttachmentDownloader
+	if cfg.Options.DownloadAttachments {
+		attDownloader = transform.NewAttachmentDownloader(cfg.Output.AttachmentFolder, dryRun, logger)
+		logger.Info("attachment downloading enabled", "folder", cfg.Output.AttachmentFolder)
+	}
+
 	// Create TUI runner if in TUI mode
 	var tuiRunner *tui.Runner
 	if useTUI {
@@ -166,11 +173,31 @@ func runSync(cmd *cobra.Command, args []string) error {
 	// Process each root
 	var syncErr error
 	for _, root := range roots {
-		if err := processRoot(ctx, client, w, logger, cfg, root, dryRun, state, tuiRunner); err != nil {
+		if err := processRoot(ctx, client, w, logger, cfg, root, dryRun, state, tuiRunner, attDownloader); err != nil {
 			logger.Error("failed to process root", "url", root.URL, "error", err)
 			syncErr = err
 			// Continue with other roots
 		}
+	}
+
+	// Write downloaded attachments to disk
+	if attDownloader != nil && !dryRun {
+		downloaded := attDownloader.GetDownloaded()
+		for url, att := range downloaded {
+			// Get attachment data and write it
+			data, err := attDownloader.GetData(ctx, url)
+			if err != nil {
+				logger.Error("failed to download attachment data", "url", url, "error", err)
+				continue
+			}
+			if _, err := w.WriteAttachment(att.LocalPath, data); err != nil {
+				logger.Error("failed to write attachment", "path", att.LocalPath, "error", err)
+				continue
+			}
+			// Update attachment state
+			state.UpdateAttachmentState(url, att.ContentHash, att.LocalPath, att.Size, "")
+		}
+		logger.Info("downloaded attachments", "count", len(downloaded))
 	}
 
 	// Save state (unless dry-run)
@@ -196,7 +223,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	return syncErr
 }
 
-func processRoot(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, cfg *config.Config, root config.Root, dryRun bool, state *sync.SyncState, tuiRunner *tui.Runner) error {
+func processRoot(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, cfg *config.Config, root config.Root, dryRun bool, state *sync.SyncState, tuiRunner *tui.Runner, attDownloader *transform.AttachmentDownloader) error {
 	// Parse URL to get ID
 	parsed, err := notion.ParseURL(root.URL)
 	if err != nil {
@@ -234,10 +261,10 @@ func processRoot(ctx context.Context, client *notion.Client, w *writer.Writer, l
 	var syncErr error
 	switch resource.Type {
 	case notion.ResourceTypePage:
-		syncErr = syncPage(ctx, client, w, logger, resource, name, dryRun, state, tuiRunner)
+		syncErr = syncPage(ctx, client, w, logger, resource, name, dryRun, state, tuiRunner, attDownloader)
 
 	case notion.ResourceTypeDatabase:
-		syncErr = syncDatabase(ctx, client, w, logger, resource, name, dryRun, state, tuiRunner)
+		syncErr = syncDatabase(ctx, client, w, logger, resource, name, dryRun, state, tuiRunner, attDownloader)
 	}
 
 	// Update TUI status
@@ -253,7 +280,7 @@ func processRoot(ctx context.Context, client *notion.Client, w *writer.Writer, l
 }
 
 // syncPage syncs a standalone page to the vault.
-func syncPage(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool, state *sync.SyncState, tuiRunner *tui.Runner) error {
+func syncPage(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool, state *sync.SyncState, tuiRunner *tui.Runner, attDownloader *transform.AttachmentDownloader) error {
 	// Fetch page metadata to get LastEditedTime
 	page, err := client.GetPage(ctx, resource.ID)
 	if err != nil {
@@ -284,8 +311,14 @@ func syncPage(ctx context.Context, client *notion.Client, w *writer.Writer, logg
 		return nil
 	}
 
-	// Transform blocks to markdown
-	transformer := transform.NewTransformer(ctx, client)
+	// Transform blocks to markdown (with attachment downloading if enabled)
+	var transformer *transform.Transformer
+	if attDownloader != nil {
+		transformer = transform.NewTransformerWithAttachments(ctx, client, attDownloader)
+	} else {
+		transformer = transform.NewTransformer(ctx, client)
+	}
+
 	markdown, err := transformer.BlocksToMarkdown(blocks)
 	if err != nil {
 		return fmt.Errorf("transforming blocks: %w", err)
@@ -310,7 +343,7 @@ func syncPage(ctx context.Context, client *notion.Client, w *writer.Writer, logg
 }
 
 // syncDatabase syncs a database and all its entries to the vault.
-func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool, state *sync.SyncState, tuiRunner *tui.Runner) error {
+func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool, state *sync.SyncState, tuiRunner *tui.Runner, attDownloader *transform.AttachmentDownloader) error {
 	// Fetch database schema
 	db, err := client.GetDatabase(ctx, resource.ID)
 	if err != nil {
@@ -389,8 +422,15 @@ func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, 
 		return fmt.Errorf("creating folder: %w", err)
 	}
 
+	// Create transformer (with attachment downloading if enabled)
+	var transformer *transform.Transformer
+	if attDownloader != nil {
+		transformer = transform.NewTransformerWithAttachments(ctx, client, attDownloader)
+	} else {
+		transformer = transform.NewTransformer(ctx, client)
+	}
+
 	// Process each entry
-	transformer := transform.NewTransformer(ctx, client)
 	syncedCount := 0
 	skippedCount := 0
 
@@ -400,6 +440,7 @@ func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, 
 
 		// Check if entry needs sync
 		if !state.NeedsEntrySync(resource.ID, pageID, lastModified) {
+			logger.Debug("entry unchanged, skipping", "id", pageID)
 			skippedCount++
 			if tuiRunner != nil {
 				tuiRunner.SetDone(pageID)
