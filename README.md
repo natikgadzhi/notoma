@@ -13,7 +13,7 @@ One-way sync tool from Notion to Obsidian. Notion is the source of truth.
 
 ## Prerequisites
 
-- Go 1.25+ (for local development)
+- Go 1.24+ (for local development)
 - Docker (optional, for containerized builds)
 - A Notion integration token ([create one here](https://www.notion.so/my-integrations))
 
@@ -146,8 +146,8 @@ golangci-lint run
 This project is under active development. Current status:
 
 - [x] Phase 1: Project scaffolding, CLI, config, Notion API connection
-- [ ] Phase 2: Block → Markdown transformation
-- [ ] Phase 3: Database → Obsidian Bases conversion
+- [x] Phase 2: Block → Markdown transformation
+- [x] Phase 3: Database → Obsidian Bases conversion
 - [ ] Phase 4: Attachments & incremental sync
 - [ ] Phase 5: CI/CD, Docker, k8s manifests
 - [ ] Phase 6: `status` command

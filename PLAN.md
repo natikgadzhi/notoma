@@ -19,7 +19,7 @@
 
 - [x] **Phase 1:** Project scaffolding, CLI, config, Notion API connection, rate limiting
 - [x] **Phase 2:** Block → Markdown transformation (all block types)
-- [ ] **Phase 3:** Database → Obsidian Bases conversion
+- [x] **Phase 3:** Database → Obsidian Bases conversion
 - [ ] **Phase 4:** Attachments & incremental sync state
 - [ ] **Phase 5:** CI/CD, Docker, k8s manifests
 - [ ] **Phase 6:** `status` command
@@ -31,7 +31,7 @@
 
 | Component | Choice | Version |
 |-----------|--------|---------|
-| Language | Go | 1.25.5+ |
+| Language | Go | 1.24.5+ |
 | Notion Client | `github.com/jomei/notionapi` | v1.13.3 |
 | CLI | `github.com/spf13/cobra` | v1.9.1 |
 | YAML | `gopkg.in/yaml.v3` | latest |
@@ -175,7 +175,7 @@ notion-sync/
 A working Dockerfile must exist from Phase 1 onward. Use this minimal version initially:
 
 ```dockerfile
-FROM golang:1.25-alpine AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -210,7 +210,7 @@ Once GitHub Actions CI is configured and the agent has `gh` authorization:
 
 ### Agent Prompt
 ```
-Initialize a Go 1.25 module called notion-sync with the project structure from the plan.
+Initialize a Go 1.24 module called notion-sync with the project structure from the plan.
 
 Set up:
 1. Cobra CLI with `sync` command
@@ -446,7 +446,7 @@ Verification:
 Set up deployment infrastructure.
 
 1. Dockerfile:
-   - Multi-stage build (golang:1.25-alpine → scratch)
+   - Multi-stage build (golang:1.24-alpine → scratch)
    - Copy CA certs for HTTPS
    - Build with CGO_ENABLED=0
 

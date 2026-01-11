@@ -6,7 +6,7 @@ One-way sync tool from Notion to Obsidian. Notion is source of truth. Supports i
 
 ## Tech Stack
 
-- **Language:** Go 1.25.5+
+- **Language:** Go 1.24+
 - **Notion Client:** `github.com/jomei/notionapi` v1.13.3
 - **CLI:** `github.com/spf13/cobra` v1.9.1
 - **Config:** `gopkg.in/yaml.v3`
