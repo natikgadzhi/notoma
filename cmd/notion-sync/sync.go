@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/jomei/notionapi"
+	"github.com/lmittmann/tint"
 	"github.com/natikgadzhi/notion-based/internal/config"
 	"github.com/natikgadzhi/notion-based/internal/notion"
 	"github.com/spf13/cobra"
@@ -40,12 +41,12 @@ func init() {
 }
 
 func runSync(cmd *cobra.Command, args []string) error {
-	// Set up logging
+	// Set up logging with colored output
 	logLevel := slog.LevelInfo
 	if verbose {
 		logLevel = slog.LevelDebug
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
 		Level: logLevel,
 	}))
 	slog.SetDefault(logger)
