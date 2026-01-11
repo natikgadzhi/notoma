@@ -1,4 +1,4 @@
-# Claude Code Instructions for notion-sync
+# Claude Code Instructions for notoma
 
 ## Project Overview
 
@@ -29,8 +29,8 @@ go test ./...              # All tests must pass
 go test -race ./...        # Required if any concurrency
 go fmt ./...               # Format code
 golangci-lint run          # No linter errors
-docker build -t notion-sync .   # Must succeed
-docker run --rm notion-sync --help  # Must show help
+docker build -t notoma .   # Must succeed
+docker run --rm notoma --help  # Must show help
 ```
 
 ## Rules
@@ -48,6 +48,21 @@ docker run --rm notion-sync --help  # Must show help
 - Commit secrets or `.env` files
 - Use goroutines without explicit need (prefer sequential code)
 
+## Commit Messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+
+```
+<type>(<scope>): <description>
+```
+
+**Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+**Examples:**
+- `feat(transform): add callout block support`
+- `fix(sync): handle rate limit errors gracefully`
+- `docs: update CLI usage examples`
+
 ## Concurrency
 
 Be extremely cautious. If goroutines are needed:
@@ -59,8 +74,8 @@ Be extremely cautious. If goroutines are needed:
 ## Project Structure
 
 ```
-notion-sync/
-├── cmd/notion-sync/main.go
+notoma/
+├── cmd/notoma/main.go
 ├── internal/
 │   ├── config/config.go
 │   ├── notion/
@@ -106,10 +121,10 @@ Study these before implementing transformation logic:
 ## CLI Commands
 
 ```bash
-notion-sync sync --config config.yaml           # Full sync
-notion-sync sync --config config.yaml --dry-run # Preview changes
-notion-sync sync --config config.yaml --force   # Ignore state, full resync
-notion-sync status --config config.yaml         # Show sync state
-notion-sync validate --config config.yaml       # Validate config and connectivity
-notion-sync version                             # Show version
+notoma sync --config config.yaml           # Full sync
+notoma sync --config config.yaml --dry-run # Preview changes
+notoma sync --config config.yaml --force   # Ignore state, full resync
+notoma status --config config.yaml         # Show sync state
+notoma validate --config config.yaml       # Validate config and connectivity
+notoma version                             # Show version
 ```

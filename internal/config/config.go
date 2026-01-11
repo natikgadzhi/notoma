@@ -1,4 +1,4 @@
-// Package config handles loading and validation of notion-sync configuration.
+// Package config handles loading and validation of notoma configuration.
 package config
 
 import (

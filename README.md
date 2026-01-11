@@ -1,4 +1,4 @@
-# notion-sync
+# notoma
 
 One-way sync tool from Notion to Obsidian. Notion is the source of truth.
 
@@ -28,14 +28,14 @@ cd notion-based
 make build
 
 # Verify it works
-./build/notion-sync --help
+./build/notoma --help
 ```
 
 Or build manually:
 
 ```bash
 go mod download
-go build -o build/notion-sync ./cmd/notion-sync
+go build -o build/notoma ./cmd/notoma
 ```
 
 ## Building with Docker
@@ -44,10 +44,10 @@ go build -o build/notion-sync ./cmd/notion-sync
 make docker
 
 # Or manually:
-docker build -t notion-sync .
+docker build -t notoma .
 
 # Run it
-docker run --rm notion-sync --help
+docker run --rm notoma --help
 ```
 
 ## Make Targets
@@ -86,7 +86,7 @@ output:
   attachment_folder: "_attachments"
 
 state:
-  file: "/path/to/notion-sync-state.json"
+  file: "/path/to/notoma-state.json"
 
 options:
   download_attachments: true
@@ -103,16 +103,16 @@ In Notion, share each page/database with your integration:
 
 ```bash
 # Full sync
-./notion-sync sync --config config.yaml
+./notoma sync --config config.yaml
 
 # Preview changes without writing files
-./notion-sync sync --config config.yaml --dry-run
+./notoma sync --config config.yaml --dry-run
 
 # Force full resync (ignore state)
-./notion-sync sync --config config.yaml --force
+./notoma sync --config config.yaml --force
 
 # Show version
-./notion-sync version
+./notoma version
 ```
 
 ### With Docker
@@ -122,7 +122,7 @@ docker run --rm \
   -e NOTION_TOKEN="your-token" \
   -v $(pwd)/config.yaml:/config.yaml:ro \
   -v /path/to/vault:/vault \
-  notion-sync sync --config /config.yaml
+  notoma sync --config /config.yaml
 ```
 
 ## Development

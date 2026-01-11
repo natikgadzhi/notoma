@@ -13,7 +13,7 @@ RUN go mod download
 COPY . .
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o notion-sync ./cmd/notion-sync
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o notoma ./cmd/notoma
 
 # Final stage - minimal image
 FROM scratch
@@ -22,6 +22,6 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy the binary
-COPY --from=builder /app/notion-sync /notion-sync
+COPY --from=builder /app/notoma /notoma
 
-ENTRYPOINT ["/notion-sync"]
+ENTRYPOINT ["/notoma"]

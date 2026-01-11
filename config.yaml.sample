@@ -1,4 +1,4 @@
-# notion-sync configuration
+# notoma configuration
 # Copy this file to config.yaml and customize for your setup
 
 sync:
@@ -21,7 +21,7 @@ output:
 
 state:
   # File to track sync state for incremental updates
-  file: "/path/to/notion-sync-state.json"
+  file: "/path/to/notoma-state.json"
 
 options:
   # Download images and files from Notion

@@ -1,4 +1,4 @@
-# notion-sync: Notion → Obsidian Continuous Sync Tool
+# notoma: Notion → Obsidian Continuous Sync Tool
 
 ## Goals
 
@@ -108,8 +108,8 @@ Study these codebases for transformation logic:
 ## Project Structure
 
 ```
-notion-sync/
-├── cmd/notion-sync/main.go
+notoma/
+├── cmd/notoma/main.go
 ├── internal/
 │   ├── config/config.go
 │   ├── notion/
@@ -146,8 +146,8 @@ notion-sync/
 4. Run tests: `go test ./...` — all must pass
 5. Run formatter: `go fmt ./...`
 6. Run linter: `golangci-lint run`
-7. Build Docker image: `docker build -t notion-sync .` — must succeed
-8. Run in Docker: `docker run --rm notion-sync --help` — must show help
+7. Build Docker image: `docker build -t notoma .` — must succeed
+8. Run in Docker: `docker run --rm notoma --help` — must show help
 9. Fix any issues before proceeding
 
 **Never:**
@@ -173,12 +173,12 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o notion-sync ./cmd/notion-sync
+RUN CGO_ENABLED=0 go build -o notoma ./cmd/notoma
 
 FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /app/notion-sync /notion-sync
-ENTRYPOINT ["/notion-sync"]
+COPY --from=builder /app/notoma /notoma
+ENTRYPOINT ["/notoma"]
 ```
 
 ### PR Workflow (After CI Setup)
@@ -203,7 +203,7 @@ Once GitHub Actions CI is configured and the agent has `gh` authorization:
 
 ### Agent Prompt
 ```
-Initialize a Go 1.24 module called notion-sync with the project structure from the plan.
+Initialize a Go 1.24 module called notoma with the project structure from the plan.
 
 Set up:
 1. Cobra CLI with `sync` command
@@ -232,9 +232,9 @@ Verification:
 - Run: go test ./... (must pass)
 - Run: go fmt ./...
 - Run: golangci-lint run
-- Run: docker build -t notion-sync . (must succeed)
-- Run: docker run --rm notion-sync --help (must show help)
-- Manual test: NOTION_TOKEN=xxx ./notion-sync sync --config config.yaml (fetch a page title)
+- Run: docker build -t notoma . (must succeed)
+- Run: docker run --rm notoma --help (must show help)
+- Manual test: NOTION_TOKEN=xxx ./notoma sync --config config.yaml (fetch a page title)
 ```
 
 ---
@@ -273,8 +273,8 @@ Verification:
 - Run: go test -race ./... (if any concurrency)
 - Run: go fmt ./...
 - Run: golangci-lint run
-- Run: docker build -t notion-sync . (must succeed)
-- Run: docker run --rm notion-sync --help (must show help)
+- Run: docker build -t notoma . (must succeed)
+- Run: docker run --rm notoma --help (must show help)
 ```
 
 ### Notion Block Types (from API)
@@ -383,8 +383,8 @@ Verification:
 - Run: go test ./... (must pass)
 - Run: go fmt ./...
 - Run: golangci-lint run
-- Run: docker build -t notion-sync . (must succeed)
-- Run: docker run --rm notion-sync --help (must show help)
+- Run: docker build -t notoma . (must succeed)
+- Run: docker run --rm notoma --help (must show help)
 ```
 
 ---
@@ -424,8 +424,8 @@ Verification:
 - Run: go test -race ./... (required for sync code)
 - Run: go fmt ./...
 - Run: golangci-lint run
-- Run: docker build -t notion-sync . (must succeed)
-- Run: docker run --rm notion-sync --help (must show help)
+- Run: docker build -t notoma . (must succeed)
+- Run: docker run --rm notoma --help (must show help)
 ```
 
 ---
@@ -459,8 +459,8 @@ Set up deployment infrastructure.
    - PVC reference for vault storage
 
 Verification:
-- Dockerfile builds locally: docker build -t notion-sync .
-- Container runs: docker run notion-sync --help
+- Dockerfile builds locally: docker build -t notoma .
+- Container runs: docker run notoma --help
 - GitHub Actions syntax is valid (use actionlint if available)
 - k8s manifests are valid YAML
 ```
@@ -469,11 +469,11 @@ Verification:
 
 ## Phase 6: Status Command
 
-**Goal:** Implement `notion-sync status` to show sync state.
+**Goal:** Implement `notoma status` to show sync state.
 
 ### Agent Prompt
 ```
-Implement the `status` command in cmd/notion-sync/status.go.
+Implement the `status` command in cmd/notoma/status.go.
 
 The command should:
 1. Load state file from config
@@ -493,19 +493,19 @@ Verification:
 - Run: go test ./... (must pass)
 - Run: go fmt ./...
 - Run: golangci-lint run
-- Run: docker build -t notion-sync . (must succeed)
-- Run: docker run --rm notion-sync status --help (must show help)
+- Run: docker build -t notoma . (must succeed)
+- Run: docker run --rm notoma status --help (must show help)
 ```
 
 ---
 
 ## Phase 7: Validate Command
 
-**Goal:** Implement `notion-sync validate` to check config and connectivity.
+**Goal:** Implement `notoma validate` to check config and connectivity.
 
 ### Agent Prompt
 ```
-Implement the `validate` command in cmd/notion-sync/validate.go.
+Implement the `validate` command in cmd/notoma/validate.go.
 
 The command should:
 1. Parse and validate config file syntax
@@ -537,8 +537,8 @@ Verification:
 - Run: go test ./... (must pass)
 - Run: go fmt ./...
 - Run: golangci-lint run
-- Run: docker build -t notion-sync . (must succeed)
-- Run: docker run --rm notion-sync validate --help (must show help)
+- Run: docker build -t notoma . (must succeed)
+- Run: docker run --rm notoma validate --help (must show help)
 ```
 
 ---
@@ -546,13 +546,13 @@ Verification:
 ## CLI Interface
 
 ```bash
-notion-sync sync --config config.yaml           # Full sync
-notion-sync sync --config config.yaml --dry-run # Preview changes
-notion-sync sync --config config.yaml --force   # Ignore state, full resync
-notion-sync status --config config.yaml         # Show sync state
-notion-sync status --config config.yaml --json  # Machine-readable state
-notion-sync validate --config config.yaml       # Validate config and connectivity
-notion-sync version                             # Show version
+notoma sync --config config.yaml           # Full sync
+notoma sync --config config.yaml --dry-run # Preview changes
+notoma sync --config config.yaml --force   # Ignore state, full resync
+notoma status --config config.yaml         # Show sync state
+notoma status --config config.yaml --json  # Machine-readable state
+notoma validate --config config.yaml       # Validate config and connectivity
+notoma version                             # Show version
 ```
 
 ---
@@ -576,7 +576,7 @@ output:
   attachment_folder: "_attachments"
 
 state:
-  file: "/data/notion-sync-state.json"
+  file: "/data/notoma-state.json"
 
 options:
   download_attachments: true
