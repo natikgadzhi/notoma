@@ -384,7 +384,7 @@ func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, 
 	// Add child entries to TUI
 	if tuiRunner != nil {
 		for _, page := range pages {
-			title := extractPageTitle(page)
+			title := notion.ExtractPageTitle(&page)
 			if title == "" {
 				title = string(page.ID)[:8] + "..."
 			}
@@ -399,7 +399,7 @@ func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, 
 				logger.Info("... and more", "remaining", len(pages)-10)
 				break
 			}
-			logger.Info("  entry", "title", extractPageTitle(page))
+			logger.Info("  entry", "title", notion.ExtractPageTitle(&page))
 		}
 		return nil
 	}
@@ -465,7 +465,7 @@ func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, 
 			// Update entry state
 			_ = state.SetEntry(resource.ID, sync.EntryState{
 				PageID:       pageID,
-				Title:        extractPageTitle(page),
+				Title:        notion.ExtractPageTitle(&page),
 				LastModified: lastModified,
 				LocalFile:    filename,
 			})
@@ -571,18 +571,4 @@ func sanitizeFilename(name string) string {
 	}
 
 	return name
-}
-
-// extractPageTitle extracts the title from a page's properties.
-func extractPageTitle(page notionapi.Page) string {
-	for _, prop := range page.Properties {
-		if titleProp, ok := prop.(*notionapi.TitleProperty); ok {
-			var result string
-			for _, rt := range titleProp.Title {
-				result += rt.PlainText
-			}
-			return result
-		}
-	}
-	return ""
 }

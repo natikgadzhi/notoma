@@ -57,7 +57,7 @@ func (c *Client) DetectResourceType(ctx context.Context, id string) (*Resource, 
 		return &Resource{
 			ID:             id,
 			Type:           ResourceTypePage,
-			Title:          extractPageTitle(page),
+			Title:          ExtractPageTitle(page),
 			LastEditedTime: time.Time(page.LastEditedTime),
 		}, nil
 	}
@@ -255,7 +255,7 @@ func (c *Client) DiscoverWorkspaceRoots(ctx context.Context) ([]Resource, error)
 				roots = append(roots, Resource{
 					ID:             string(page.ID),
 					Type:           ResourceTypePage,
-					Title:          extractPageTitle(page),
+					Title:          ExtractPageTitle(page),
 					LastEditedTime: time.Time(page.LastEditedTime),
 				})
 			}
@@ -306,8 +306,8 @@ func isNotFoundOrWrongTypeError(err error) bool {
 	return false
 }
 
-// extractPageTitle extracts the title from a page's properties.
-func extractPageTitle(page *notionapi.Page) string {
+// ExtractPageTitle extracts the title from a page's properties.
+func ExtractPageTitle(page *notionapi.Page) string {
 	if page == nil || page.Properties == nil {
 		return ""
 	}

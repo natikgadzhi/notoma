@@ -21,8 +21,8 @@ One-way sync tool from Notion to Obsidian. Notion is the source of truth.
 
 ```bash
 # Clone the repository
-git clone https://github.com/natikgadzhi/notion-based.git
-cd notion-based
+git clone https://github.com/natikgadzhi/notoma.git
+cd notoma
 
 # Build using Make (outputs to build/)
 make build
