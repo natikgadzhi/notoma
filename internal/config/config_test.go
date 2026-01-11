@@ -112,7 +112,78 @@ state:
 
 	_, err := Load(configPath)
 	if err == nil {
-		t.Error("expected error for empty roots")
+		t.Error("expected error for empty roots without discover_workspace_roots")
+	}
+}
+
+func TestLoad_DiscoverWorkspaceRoots(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	configContent := `
+sync:
+  discover_workspace_roots: true
+output:
+  vault_path: "/data/vault"
+  attachment_folder: "_attachments"
+state:
+  file: "/data/state.json"
+options:
+  download_attachments: true
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token-123")
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if !cfg.Sync.DiscoverWorkspaceRoots {
+		t.Error("expected discover_workspace_roots to be true")
+	}
+
+	if len(cfg.Sync.Roots) != 0 {
+		t.Errorf("expected 0 roots, got %d", len(cfg.Sync.Roots))
+	}
+}
+
+func TestLoad_CombinedRootsAndDiscovery(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	// Both explicit roots and discover_workspace_roots can be used together
+	configContent := `
+sync:
+  discover_workspace_roots: true
+  roots:
+    - url: "https://www.notion.so/workspace/Test-Page-abc123def456abc123def456abc123de"
+      name: "Explicit Root"
+output:
+  vault_path: "/data/vault"
+state:
+  file: "/data/state.json"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token")
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if !cfg.Sync.DiscoverWorkspaceRoots {
+		t.Error("expected discover_workspace_roots to be true")
+	}
+
+	if len(cfg.Sync.Roots) != 1 {
+		t.Errorf("expected 1 explicit root, got %d", len(cfg.Sync.Roots))
 	}
 }
 
@@ -157,7 +228,7 @@ func TestValidate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "valid config",
+			name: "valid config with roots",
 			config: Config{
 				Sync: SyncConfig{
 					Roots: []Root{{URL: "https://notion.so/test"}},
@@ -173,7 +244,40 @@ func TestValidate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing roots",
+			name: "valid config with discover_workspace_roots",
+			config: Config{
+				Sync: SyncConfig{
+					DiscoverWorkspaceRoots: true,
+				},
+				Output: OutputConfig{
+					VaultPath: "/data/vault",
+				},
+				State: StateConfig{
+					File: "/data/state.json",
+				},
+				NotionToken: "test-token",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid config with both roots and discover_workspace_roots",
+			config: Config{
+				Sync: SyncConfig{
+					Roots:                  []Root{{URL: "https://notion.so/test"}},
+					DiscoverWorkspaceRoots: true,
+				},
+				Output: OutputConfig{
+					VaultPath: "/data/vault",
+				},
+				State: StateConfig{
+					File: "/data/state.json",
+				},
+				NotionToken: "test-token",
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing roots and discover_workspace_roots",
 			config: Config{
 				Sync: SyncConfig{
 					Roots: []Root{},

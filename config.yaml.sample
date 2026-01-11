@@ -2,6 +2,12 @@
 # Copy this file to config.yaml and customize for your setup
 
 sync:
+  # Option 1: Auto-discover all root-level pages in the workspace
+  # This finds all pages/databases shared with the integration that are
+  # at the workspace root level (not nested inside other pages).
+  # discover_workspace_roots: true
+
+  # Option 2: Explicitly list specific pages/databases to sync
   roots:
     # Add Notion page or database URLs here
     # Get the URL by clicking "Share" -> "Copy link" in Notion
@@ -11,6 +17,9 @@ sync:
     # Database example (URLs with ?v= parameter)
     - url: "https://www.notion.so/your-workspace/abc123...?v=xyz789..."
       name: "My Database"
+
+  # Note: You can use both options together. When discover_workspace_roots is
+  # true, discovered roots will be synced in addition to any explicit roots.
 
 output:
   # Path to your Obsidian vault

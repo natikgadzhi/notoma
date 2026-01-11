@@ -188,6 +188,81 @@ func (c *Client) GetCurrentUser(ctx context.Context) (*notionapi.User, error) {
 	return user, nil
 }
 
+// SearchAll searches for all pages and databases shared with the integration.
+// If filter is empty, returns both pages and databases.
+// filter can be "page" or "database" to limit results.
+func (c *Client) SearchAll(ctx context.Context, filter string) ([]notionapi.Object, error) {
+	var allResults []notionapi.Object
+	var cursor notionapi.Cursor
+
+	for {
+		if err := c.limiter.Wait(ctx); err != nil {
+			return nil, err
+		}
+
+		c.logger.Debug("searching workspace", "filter", filter, "cursor", cursor)
+		req := &notionapi.SearchRequest{
+			StartCursor: cursor,
+			PageSize:    100,
+		}
+
+		if filter != "" {
+			req.Filter = notionapi.SearchFilter{
+				Property: "object",
+				Value:    filter,
+			}
+		}
+
+		resp, err := c.api.Search.Do(ctx, req)
+		if err != nil {
+			return nil, c.handleError(err)
+		}
+
+		allResults = append(allResults, resp.Results...)
+
+		if !resp.HasMore {
+			break
+		}
+		cursor = resp.NextCursor
+	}
+
+	return allResults, nil
+}
+
+// DiscoverWorkspaceRoots finds all root-level pages and databases in the workspace.
+// Root items have a parent of type "workspace".
+func (c *Client) DiscoverWorkspaceRoots(ctx context.Context) ([]Resource, error) {
+	results, err := c.SearchAll(ctx, "")
+	if err != nil {
+		return nil, fmt.Errorf("searching workspace: %w", err)
+	}
+
+	var roots []Resource
+	for _, obj := range results {
+		switch item := obj.(type) {
+		case *notionapi.Page:
+			if item.Parent.Type == notionapi.ParentTypeWorkspace {
+				roots = append(roots, Resource{
+					ID:    string(item.ID),
+					Type:  ResourceTypePage,
+					Title: extractPageTitle(item),
+				})
+			}
+		case *notionapi.Database:
+			if item.Parent.Type == notionapi.ParentTypeWorkspace {
+				roots = append(roots, Resource{
+					ID:    string(item.ID),
+					Type:  ResourceTypeDatabase,
+					Title: extractDatabaseTitle(item),
+				})
+			}
+		}
+	}
+
+	c.logger.Info("discovered workspace roots", "count", len(roots))
+	return roots, nil
+}
+
 // handleError processes API errors and handles rate limiting.
 func (c *Client) handleError(err error) error {
 	var apiErr *notionapi.Error
