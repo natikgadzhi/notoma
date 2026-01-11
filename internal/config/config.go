@@ -34,7 +34,16 @@ type Options struct {
 
 // SyncConfig contains the list of roots to sync.
 type SyncConfig struct {
-	Roots []Root `yaml:"roots"`
+	// Roots is a list of specific Notion pages/databases to sync.
+	// Can be empty if DiscoverWorkspaceRoots is true.
+	Roots []Root `yaml:"roots,omitempty"`
+
+	// DiscoverWorkspaceRoots when true, automatically discovers all
+	// root-level pages and databases in the workspace (pages/databases
+	// whose parent is the workspace itself, not nested under other pages).
+	// This uses the Notion Search API to find all items shared with the
+	// integration and filters for those at the workspace root level.
+	DiscoverWorkspaceRoots bool `yaml:"discover_workspace_roots,omitempty"`
 }
 
 // Config is the top-level configuration structure.
@@ -79,8 +88,9 @@ func Load(path string) (*Config, error) {
 func (c *Config) Validate() error {
 	var errs []error
 
-	if len(c.Sync.Roots) == 0 {
-		errs = append(errs, errors.New("at least one sync root is required"))
+	// Either roots must be specified, or discover_workspace_roots must be true
+	if len(c.Sync.Roots) == 0 && !c.Sync.DiscoverWorkspaceRoots {
+		errs = append(errs, errors.New("either sync.roots or sync.discover_workspace_roots is required"))
 	}
 
 	for i, root := range c.Sync.Roots {

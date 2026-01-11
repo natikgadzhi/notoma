@@ -121,9 +121,32 @@ func runSync(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Build list of roots to process
+	roots := cfg.Sync.Roots
+
+	// Discover workspace roots if enabled
+	if cfg.Sync.DiscoverWorkspaceRoots {
+		logger.Info("discovering workspace roots")
+		discovered, err := client.DiscoverWorkspaceRoots(ctx)
+		if err != nil {
+			return fmt.Errorf("discovering workspace roots: %w", err)
+		}
+		logger.Info("discovered workspace roots", "count", len(discovered))
+
+		// Convert discovered resources to config.Root format
+		for _, res := range discovered {
+			// Use Notion URL format for discovered roots
+			url := fmt.Sprintf("https://notion.so/%s", strings.ReplaceAll(res.ID, "-", ""))
+			roots = append(roots, config.Root{
+				URL:  url,
+				Name: res.Title,
+			})
+		}
+	}
+
 	// Process each root
 	var syncErr error
-	for _, root := range cfg.Sync.Roots {
+	for _, root := range roots {
 		if err := processRoot(ctx, client, w, logger, cfg, root, dryRun, tuiRunner); err != nil {
 			logger.Error("failed to process root", "url", root.URL, "error", err)
 			syncErr = err
