@@ -345,6 +345,7 @@ func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, 
 			LocalPath:    folder,
 			Entries:      make(map[string]sync.EntryState),
 		})
+		dbState = state.GetResource(resource.ID)
 	}
 
 	// Add child entries to TUI
@@ -440,7 +441,7 @@ func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, 
 		Title:        resource.Title,
 		LastModified: db.LastEditedTime,
 		LocalPath:    folder,
-		Entries:      state.GetResource(resource.ID).Entries,
+		Entries:      dbState.Entries,
 	})
 
 	logger.Info("synced database",
