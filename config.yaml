@@ -1,8 +1,0 @@
-sync:
-  roots:
-    - url: "https://www.notion.so/1e567c00f3f9805dafe3e53f460e93e3?v=1e667c00f3f980848aea000c507d821a"
-output:
-  vault_path: "./test-output"
-  attachment_folder: "_attachments"
-state:
-  file: "./test-state.json"

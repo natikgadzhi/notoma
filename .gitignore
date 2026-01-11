@@ -28,6 +28,10 @@ go.work.sum
 *.env
 !.env.sample
 
+# Config files (may contain workspace-specific URLs)
+config.yaml
+config.yml
+
 # State files
 *-state.json
 
