@@ -59,8 +59,8 @@ func (c *Client) DetectResourceType(ctx context.Context, id string) (*Resource, 
 		}, nil
 	}
 
-	// Check if it's a "not found" type error that might mean it's a database
-	if !isNotFoundError(err) {
+	// Check if it's a "not found" or "wrong type" error that means we should try database
+	if !isNotFoundOrWrongTypeError(err) {
 		return nil, fmt.Errorf("checking page %s: %w", id, err)
 	}
 
@@ -74,7 +74,7 @@ func (c *Client) DetectResourceType(ctx context.Context, id string) (*Resource, 
 		}, nil
 	}
 
-	if isNotFoundError(err) {
+	if isNotFoundOrWrongTypeError(err) {
 		return nil, fmt.Errorf("resource %s not found or not shared with integration", id)
 	}
 
@@ -201,12 +201,16 @@ func (c *Client) handleError(err error) error {
 	return err
 }
 
-// isNotFoundError checks if the error indicates a resource was not found.
-func isNotFoundError(err error) bool {
+// isNotFoundOrWrongTypeError checks if the error indicates a resource was not found
+// or is the wrong type (e.g., trying to access a database as a page).
+func isNotFoundOrWrongTypeError(err error) bool {
 	var apiErr *notionapi.Error
 	if errors.As(err, &apiErr) {
+		// object_not_found: resource doesn't exist
+		// validation_error: wrong type (e.g., "this is a database, not a page")
 		return apiErr.Status == http.StatusNotFound ||
-			apiErr.Code == "object_not_found"
+			apiErr.Code == "object_not_found" ||
+			apiErr.Code == "validation_error"
 	}
 	return false
 }

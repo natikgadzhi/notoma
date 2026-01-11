@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/jomei/notionapi"
 	"github.com/natikgadzhi/notion-based/internal/config"
 	"github.com/natikgadzhi/notion-based/internal/notion"
 	"github.com/spf13/cobra"
@@ -123,28 +124,53 @@ func processRoot(ctx context.Context, client *notion.Client, logger *slog.Logger
 		"id", resource.ID,
 	)
 
-	if dryRun {
-		logger.Info("would sync resource", "type", resource.Type, "title", resource.Title)
-		return nil
-	}
-
-	// TODO: Implement actual sync logic in Phase 2-4
-	// For now, just verify we can access the resource
+	// Fetch content info (for both dry-run preview and actual sync)
 	switch resource.Type {
 	case notion.ResourceTypePage:
 		blocks, err := client.GetBlockChildren(ctx, resource.ID)
 		if err != nil {
 			return fmt.Errorf("fetching page blocks: %w", err)
 		}
-		logger.Info("fetched page blocks", "count", len(blocks))
+		if dryRun {
+			logger.Info("would sync page", "title", resource.Title, "blocks", len(blocks))
+		} else {
+			logger.Info("fetched page blocks", "count", len(blocks))
+			// TODO: Implement actual sync logic in Phase 2-4
+		}
 
 	case notion.ResourceTypeDatabase:
 		pages, err := client.QueryDatabase(ctx, resource.ID)
 		if err != nil {
 			return fmt.Errorf("querying database: %w", err)
 		}
-		logger.Info("fetched database entries", "count", len(pages))
+		if dryRun {
+			logger.Info("would sync database", "title", resource.Title, "entries", len(pages))
+			for i, page := range pages {
+				if i >= 10 {
+					logger.Info("... and more", "remaining", len(pages)-10)
+					break
+				}
+				logger.Info("  entry", "title", extractPageTitle(page))
+			}
+		} else {
+			logger.Info("fetched database entries", "count", len(pages))
+			// TODO: Implement actual sync logic in Phase 2-4
+		}
 	}
 
 	return nil
+}
+
+// extractPageTitle extracts the title from a page's properties.
+func extractPageTitle(page notionapi.Page) string {
+	for _, prop := range page.Properties {
+		if titleProp, ok := prop.(*notionapi.TitleProperty); ok {
+			var result string
+			for _, rt := range titleProp.Title {
+				result += rt.PlainText
+			}
+			return result
+		}
+	}
+	return ""
 }
