@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var statusConfigPath string
-
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show sync state and tracked resources",
@@ -24,12 +22,12 @@ var statusCmd = &cobra.Command{
 }
 
 func init() {
-	statusCmd.Flags().StringVarP(&statusConfigPath, "config", "c", "config.yaml", "path to config file")
+	statusCmd.Flags().StringVarP(&configPath, "config", "c", "config.yaml", "path to config file")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
 	// Load configuration
-	cfg, err := config.Load(statusConfigPath)
+	cfg, err := config.Load(configPath)
 	if err != nil {
 		return fmt.Errorf("loading config: %w", err)
 	}
@@ -53,7 +51,7 @@ func printStatus(w io.Writer, cfg *config.Config, state *sync.SyncState) {
 	_, _ = fmt.Fprintln(w)
 
 	// Config info
-	_, _ = fmt.Fprintf(w, "Config file:  %s\n", statusConfigPath)
+	_, _ = fmt.Fprintf(w, "Config file:  %s\n", configPath)
 	_, _ = fmt.Fprintf(w, "State file:   %s\n", cfg.State.File)
 	_, _ = fmt.Fprintf(w, "Vault path:   %s\n", cfg.Output.VaultPath)
 	_, _ = fmt.Fprintln(w)
