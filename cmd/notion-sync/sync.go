@@ -6,12 +6,15 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/jomei/notionapi"
 	"github.com/lmittmann/tint"
 	"github.com/natikgadzhi/notion-based/internal/config"
 	"github.com/natikgadzhi/notion-based/internal/notion"
+	"github.com/natikgadzhi/notion-based/internal/transform"
+	"github.com/natikgadzhi/notion-based/internal/writer"
 	"github.com/spf13/cobra"
 )
 
@@ -88,9 +91,12 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 	logger.Info("connected to Notion", "bot", user.Name)
 
+	// Create writer
+	w := writer.New(cfg.Output.VaultPath, cfg.Output.AttachmentFolder, dryRun, logger)
+
 	// Process each root
 	for _, root := range cfg.Sync.Roots {
-		if err := processRoot(ctx, client, logger, cfg, root, dryRun); err != nil {
+		if err := processRoot(ctx, client, w, logger, cfg, root, dryRun); err != nil {
 			logger.Error("failed to process root", "url", root.URL, "error", err)
 			// Continue with other roots
 		}
@@ -100,7 +106,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func processRoot(ctx context.Context, client *notion.Client, logger *slog.Logger, cfg *config.Config, root config.Root, dryRun bool) error {
+func processRoot(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, cfg *config.Config, root config.Root, dryRun bool) error {
 	// Parse URL to get ID
 	parsed, err := notion.ParseURL(root.URL)
 	if err != nil {
@@ -125,41 +131,190 @@ func processRoot(ctx context.Context, client *notion.Client, logger *slog.Logger
 		"id", resource.ID,
 	)
 
-	// Fetch content info (for both dry-run preview and actual sync)
 	switch resource.Type {
 	case notion.ResourceTypePage:
-		blocks, err := client.GetBlockChildren(ctx, resource.ID)
-		if err != nil {
-			return fmt.Errorf("fetching page blocks: %w", err)
-		}
-		if dryRun {
-			logger.Info("would sync page", "title", resource.Title, "blocks", len(blocks))
-		} else {
-			logger.Info("fetched page blocks", "count", len(blocks))
-			// TODO: Implement actual sync logic in Phase 2-4
-		}
+		return syncPage(ctx, client, w, logger, resource, name, dryRun)
 
 	case notion.ResourceTypeDatabase:
-		pages, err := client.QueryDatabase(ctx, resource.ID)
-		if err != nil {
-			return fmt.Errorf("querying database: %w", err)
-		}
-		if dryRun {
-			logger.Info("would sync database", "title", resource.Title, "entries", len(pages))
-			for i, page := range pages {
-				if i >= 10 {
-					logger.Info("... and more", "remaining", len(pages)-10)
-					break
-				}
-				logger.Info("  entry", "title", extractPageTitle(page))
-			}
-		} else {
-			logger.Info("fetched database entries", "count", len(pages))
-			// TODO: Implement actual sync logic in Phase 2-4
-		}
+		return syncDatabase(ctx, client, w, logger, resource, name, dryRun)
 	}
 
 	return nil
+}
+
+// syncPage syncs a standalone page to the vault.
+func syncPage(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool) error {
+	// Fetch blocks
+	blocks, err := client.GetBlockChildren(ctx, resource.ID)
+	if err != nil {
+		return fmt.Errorf("fetching page blocks: %w", err)
+	}
+
+	if dryRun {
+		logger.Info("would sync page", "title", resource.Title, "blocks", len(blocks))
+		return nil
+	}
+
+	// Transform blocks to markdown
+	transformer := transform.NewTransformer(ctx, client)
+	markdown, err := transformer.BlocksToMarkdown(blocks)
+	if err != nil {
+		return fmt.Errorf("transforming blocks: %w", err)
+	}
+
+	// Write markdown file
+	filename := sanitizeFilename(resource.Title) + ".md"
+	if err := w.WriteMarkdown("", filename, markdown); err != nil {
+		return fmt.Errorf("writing markdown: %w", err)
+	}
+
+	logger.Info("synced page", "title", resource.Title, "file", filename)
+	return nil
+}
+
+// syncDatabase syncs a database and all its entries to the vault.
+func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool) error {
+	// Fetch database schema
+	db, err := client.GetDatabase(ctx, resource.ID)
+	if err != nil {
+		return fmt.Errorf("fetching database: %w", err)
+	}
+
+	schema, err := transform.ParseDatabaseSchema(db)
+	if err != nil {
+		return fmt.Errorf("parsing database schema: %w", err)
+	}
+
+	// Determine folder path for entries
+	folder := sanitizeFilename(resource.Title)
+	if folderName != "" && !isUUIDPrefix(folderName) {
+		folder = sanitizeFilename(folderName)
+	}
+
+	// Query database entries
+	pages, err := client.QueryDatabase(ctx, resource.ID)
+	if err != nil {
+		return fmt.Errorf("querying database: %w", err)
+	}
+
+	if dryRun {
+		logger.Info("would sync database", "title", resource.Title, "folder", folder, "entries", len(pages))
+		for i, page := range pages {
+			if i >= 10 {
+				logger.Info("... and more", "remaining", len(pages)-10)
+				break
+			}
+			logger.Info("  entry", "title", extractPageTitle(page))
+		}
+		return nil
+	}
+
+	// Generate and write .base file
+	baseFile, err := transform.GenerateBaseFile(schema, folder)
+	if err != nil {
+		return fmt.Errorf("generating base file: %w", err)
+	}
+	baseContent, err := transform.MarshalBaseFile(baseFile)
+	if err != nil {
+		return fmt.Errorf("marshaling base file: %w", err)
+	}
+	if err := w.WriteBase("", resource.Title, baseContent); err != nil {
+		return fmt.Errorf("writing base file: %w", err)
+	}
+
+	// Ensure folder exists for entries
+	if err := w.EnsureFolder(folder); err != nil {
+		return fmt.Errorf("creating folder: %w", err)
+	}
+
+	// Process each entry
+	transformer := transform.NewTransformer(ctx, client)
+	for _, page := range pages {
+		if err := syncDatabaseEntry(ctx, client, w, transformer, logger, &page, schema, folder); err != nil {
+			logger.Error("failed to sync entry", "id", page.ID, "error", err)
+			// Continue with other entries
+		}
+	}
+
+	logger.Info("synced database", "title", resource.Title, "folder", folder, "entries", len(pages))
+	return nil
+}
+
+// syncDatabaseEntry syncs a single database entry.
+func syncDatabaseEntry(ctx context.Context, client *notion.Client, w *writer.Writer, transformer *transform.Transformer, logger *slog.Logger, page *notionapi.Page, schema *transform.DatabaseSchema, folder string) error {
+	// Extract entry data for frontmatter
+	entry, err := transform.ExtractEntryData(page, schema)
+	if err != nil {
+		return fmt.Errorf("extracting entry data: %w", err)
+	}
+
+	// Fetch page content blocks
+	blocks, err := client.GetBlockChildren(ctx, string(page.ID))
+	if err != nil {
+		return fmt.Errorf("fetching entry blocks: %w", err)
+	}
+
+	// Transform blocks to markdown
+	markdown, err := transformer.BlocksToMarkdown(blocks)
+	if err != nil {
+		return fmt.Errorf("transforming blocks: %w", err)
+	}
+
+	// Build complete entry with frontmatter
+	dbEntry, err := transform.BuildDatabaseEntry(entry, markdown)
+	if err != nil {
+		return fmt.Errorf("building entry: %w", err)
+	}
+
+	// Write the file
+	content := dbEntry.Frontmatter + "\n" + dbEntry.Content
+	if err := w.WriteMarkdown(folder, dbEntry.Filename, content); err != nil {
+		return fmt.Errorf("writing entry: %w", err)
+	}
+
+	logger.Debug("synced entry", "title", entry.Title, "file", dbEntry.Filename)
+	return nil
+}
+
+// isUUIDPrefix checks if the name looks like a truncated UUID (e.g., "1e567c00...").
+func isUUIDPrefix(name string) bool {
+	if len(name) < 8 {
+		return false
+	}
+	// Check if first 8 chars are hex
+	for _, c := range name[:8] {
+		isDigit := c >= '0' && c <= '9'
+		isHexLower := c >= 'a' && c <= 'f'
+		if !isDigit && !isHexLower {
+			return false
+		}
+	}
+	return true
+}
+
+// sanitizeFilename makes a string safe for use as a filename.
+func sanitizeFilename(name string) string {
+	replacer := strings.NewReplacer(
+		"/", "-",
+		"\\", "-",
+		":", "-",
+		"*", "",
+		"?", "",
+		"\"", "",
+		"<", "",
+		">", "",
+		"|", "",
+		"\n", " ",
+		"\r", "",
+	)
+	name = replacer.Replace(name)
+	name = strings.TrimSpace(name)
+
+	if len(name) > 200 {
+		name = name[:200]
+	}
+
+	return name
 }
 
 // extractPageTitle extracts the title from a page's properties.
