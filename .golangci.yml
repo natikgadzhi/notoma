@@ -16,4 +16,4 @@ formatters:
     - gofmt
 
 issues:
-  exclude-use-default: false
+  exclude-default-patterns: false
