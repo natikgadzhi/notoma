@@ -52,9 +52,9 @@ func TestPrintStatus_EmptyState(t *testing.T) {
 	state := sync.NewSyncState()
 
 	// Set the global variable used by printStatus
-	oldConfigPath := statusConfigPath
-	statusConfigPath = "config.yaml"
-	defer func() { statusConfigPath = oldConfigPath }()
+	oldConfigPath := configPath
+	configPath = "config.yaml"
+	defer func() { configPath = oldConfigPath }()
 
 	printStatus(&buf, cfg, state)
 
@@ -113,9 +113,9 @@ func TestPrintStatus_WithResources(t *testing.T) {
 	})
 
 	// Set the global variable used by printStatus
-	oldConfigPath := statusConfigPath
-	statusConfigPath = "config.yaml"
-	defer func() { statusConfigPath = oldConfigPath }()
+	oldConfigPath := configPath
+	configPath = "config.yaml"
+	defer func() { configPath = oldConfigPath }()
 
 	printStatus(&buf, cfg, state)
 
@@ -155,9 +155,9 @@ func TestPrintStatus_ShowsLastSyncTime(t *testing.T) {
 	state := sync.NewSyncState()
 	state.LastSyncTime = time.Now().Add(-30 * time.Minute)
 
-	oldConfigPath := statusConfigPath
-	statusConfigPath = "config.yaml"
-	defer func() { statusConfigPath = oldConfigPath }()
+	oldConfigPath := configPath
+	configPath = "config.yaml"
+	defer func() { configPath = oldConfigPath }()
 
 	printStatus(&buf, cfg, state)
 

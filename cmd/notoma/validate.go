@@ -1,25 +1,17 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
 
-	"github.com/lmittmann/tint"
 	"github.com/natikgadzhi/notion-based/internal/config"
 	"github.com/natikgadzhi/notion-based/internal/notion"
 	"github.com/spf13/cobra"
 )
 
-var (
-	validateConfigPath string
-	validateVerbose    bool
-)
+var validateVerbose bool
 
 var validateCmd = &cobra.Command{
 	Use:   "validate",
@@ -40,7 +32,7 @@ This command performs the following checks:
 }
 
 func init() {
-	validateCmd.Flags().StringVarP(&validateConfigPath, "config", "c", "config.yaml", "path to config file")
+	validateCmd.Flags().StringVarP(&configPath, "config", "c", "config.yaml", "path to config file")
 	validateCmd.Flags().BoolVarP(&validateVerbose, "verbose", "v", false, "enable verbose logging")
 }
 
@@ -53,36 +45,18 @@ type ValidationResult struct {
 
 // runValidate performs all validation checks and reports results.
 func runValidate(cmd *cobra.Command, args []string) error {
-	// Set up logging
-	logLevel := slog.LevelInfo
-	if validateVerbose {
-		logLevel = slog.LevelDebug
-	}
-
-	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
-		Level: logLevel,
-	}))
-	slog.SetDefault(logger)
-
-	// Set up context with signal handling
-	ctx, cancel := context.WithCancel(context.Background())
+	// Set up logging and signal handling
+	logger := setupLogger(nil, validateVerbose)
+	ctx, cancel := setupSignalHandler(logger)
 	defer cancel()
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigCh
-		logger.Info("received shutdown signal, canceling...")
-		cancel()
-	}()
 
 	// Collect all validation results
 	var results []ValidationResult
 	var hasErrors bool
 
 	// Check 1: Config file exists
-	logger.Debug("checking config file", "path", validateConfigPath)
-	if _, err := os.Stat(validateConfigPath); err != nil {
+	logger.Debug("checking config file", "path", configPath)
+	if _, err := os.Stat(configPath); err != nil {
 		results = append(results, ValidationResult{
 			Check:   "Config file exists",
 			Passed:  false,
@@ -98,7 +72,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	// Check 2: Config file is valid and complete
 	logger.Debug("loading configuration")
-	cfg, err := config.Load(validateConfigPath)
+	cfg, err := config.Load(configPath)
 	if err != nil {
 		results = append(results, ValidationResult{
 			Check:   "Config file valid",
