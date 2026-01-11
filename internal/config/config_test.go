@@ -1,0 +1,217 @@
+package config
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestLoad(t *testing.T) {
+	// Create a temporary config file
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	configContent := `
+sync:
+  roots:
+    - url: "https://www.notion.so/workspace/Test-Page-abc123def456abc123def456abc123de"
+      name: "Test Page"
+output:
+  vault_path: "/data/vault"
+  attachment_folder: "_attachments"
+state:
+  file: "/data/state.json"
+options:
+  download_attachments: true
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	// Set NOTION_TOKEN env var
+	t.Setenv("NOTION_TOKEN", "test-token-123")
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Verify config values
+	if len(cfg.Sync.Roots) != 1 {
+		t.Errorf("expected 1 root, got %d", len(cfg.Sync.Roots))
+	}
+
+	if cfg.Sync.Roots[0].Name != "Test Page" {
+		t.Errorf("expected root name 'Test Page', got %q", cfg.Sync.Roots[0].Name)
+	}
+
+	if cfg.Output.VaultPath != "/data/vault" {
+		t.Errorf("expected vault_path '/data/vault', got %q", cfg.Output.VaultPath)
+	}
+
+	if cfg.Output.AttachmentFolder != "_attachments" {
+		t.Errorf("expected attachment_folder '_attachments', got %q", cfg.Output.AttachmentFolder)
+	}
+
+	if cfg.State.File != "/data/state.json" {
+		t.Errorf("expected state file '/data/state.json', got %q", cfg.State.File)
+	}
+
+	if !cfg.Options.DownloadAttachments {
+		t.Error("expected download_attachments to be true")
+	}
+
+	if cfg.NotionToken != "test-token-123" {
+		t.Errorf("expected NotionToken 'test-token-123', got %q", cfg.NotionToken)
+	}
+}
+
+func TestLoad_MissingToken(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	configContent := `
+sync:
+  roots:
+    - url: "https://www.notion.so/workspace/abc123def456abc123def456abc123de"
+output:
+  vault_path: "/data/vault"
+state:
+  file: "/data/state.json"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	// Ensure NOTION_TOKEN is not set
+	t.Setenv("NOTION_TOKEN", "")
+
+	_, err := Load(configPath)
+	if err == nil {
+		t.Error("expected error for missing NOTION_TOKEN")
+	}
+}
+
+func TestLoad_MissingRoots(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	configContent := `
+sync:
+  roots: []
+output:
+  vault_path: "/data/vault"
+state:
+  file: "/data/state.json"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token")
+
+	_, err := Load(configPath)
+	if err == nil {
+		t.Error("expected error for empty roots")
+	}
+}
+
+func TestLoad_MissingVaultPath(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	configContent := `
+sync:
+  roots:
+    - url: "https://www.notion.so/workspace/abc123def456abc123def456abc123de"
+output:
+  attachment_folder: "_attachments"
+state:
+  file: "/data/state.json"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token")
+
+	_, err := Load(configPath)
+	if err == nil {
+		t.Error("expected error for missing vault_path")
+	}
+}
+
+func TestLoad_FileNotFound(t *testing.T) {
+	t.Setenv("NOTION_TOKEN", "test-token")
+
+	_, err := Load("/nonexistent/config.yaml")
+	if err == nil {
+		t.Error("expected error for nonexistent file")
+	}
+}
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  Config
+		wantErr bool
+	}{
+		{
+			name: "valid config",
+			config: Config{
+				Sync: SyncConfig{
+					Roots: []Root{{URL: "https://notion.so/test"}},
+				},
+				Output: OutputConfig{
+					VaultPath: "/data/vault",
+				},
+				State: StateConfig{
+					File: "/data/state.json",
+				},
+				NotionToken: "test-token",
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing roots",
+			config: Config{
+				Sync: SyncConfig{
+					Roots: []Root{},
+				},
+				Output: OutputConfig{
+					VaultPath: "/data/vault",
+				},
+				State: StateConfig{
+					File: "/data/state.json",
+				},
+				NotionToken: "test-token",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty root URL",
+			config: Config{
+				Sync: SyncConfig{
+					Roots: []Root{{URL: "", Name: "Test"}},
+				},
+				Output: OutputConfig{
+					VaultPath: "/data/vault",
+				},
+				State: StateConfig{
+					File: "/data/state.json",
+				},
+				NotionToken: "test-token",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

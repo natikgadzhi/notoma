@@ -1,0 +1,40 @@
+# Binaries
+notion-sync
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of go coverage tool
+*.out
+
+# Go workspace file
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment files (never commit secrets)
+.env
+*.env
+!.env.sample
+
+# State files
+*-state.json
+
+# macOS
+.DS_Store
+
+# Build artifacts
+build/
+dist/
+bin/
