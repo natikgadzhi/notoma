@@ -298,6 +298,73 @@ func TestSetResource(t *testing.T) {
 	}
 }
 
+// TestDatabaseStateInitAndUpdate tests the pattern used in syncDatabase where we:
+// 1. Get resource (may be nil for new databases)
+// 2. Set resource if nil to initialize it
+// 3. Add entries to the database
+// 4. Update the resource with the entries
+// This test ensures we don't have nil pointer issues when accessing Entries.
+func TestDatabaseStateInitAndUpdate(t *testing.T) {
+	state := NewSyncState()
+	dbID := "db-123"
+
+	// Step 1: Get resource - should be nil for new database
+	dbState := state.GetResource(dbID)
+	if dbState != nil {
+		t.Fatal("expected nil for new database")
+	}
+
+	// Step 2: Initialize if nil (simulating syncDatabase behavior)
+	if dbState == nil {
+		state.SetResource(ResourceState{
+			ID:      dbID,
+			Type:    ResourceTypeDatabase,
+			Title:   "Test Database",
+			Entries: make(map[string]EntryState),
+		})
+		dbState = state.GetResource(dbID)
+	}
+
+	// Verify dbState is now valid
+	if dbState == nil {
+		t.Fatal("dbState should not be nil after initialization")
+	}
+	if dbState.Entries == nil {
+		t.Fatal("dbState.Entries should not be nil after initialization")
+	}
+
+	// Step 3: Add entries (simulating entry sync)
+	_ = state.SetEntry(dbID, EntryState{
+		PageID: "entry-1",
+		Title:  "Entry One",
+	})
+	_ = state.SetEntry(dbID, EntryState{
+		PageID: "entry-2",
+		Title:  "Entry Two",
+	})
+
+	// Step 4: Update database state using cached dbState.Entries
+	// This is the pattern that previously could cause nil pointer dereference
+	state.SetResource(ResourceState{
+		ID:      dbID,
+		Type:    ResourceTypeDatabase,
+		Title:   "Test Database Updated",
+		Entries: dbState.Entries,
+	})
+
+	// Verify final state
+	finalState := state.GetResource(dbID)
+	if finalState == nil {
+		t.Fatal("final state should not be nil")
+	}
+	if finalState.Title != "Test Database Updated" {
+		t.Errorf("expected updated title, got %q", finalState.Title)
+	}
+	if len(finalState.Entries) != 2 {
+		t.Errorf("expected 2 entries, got %d", len(finalState.Entries))
+	}
+}
+
 func TestRemoveResource(t *testing.T) {
 	state := NewSyncState()
 	state.Resources["page-1"] = ResourceState{ID: "page-1"}
