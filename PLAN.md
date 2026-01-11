@@ -20,10 +20,11 @@
 - [x] **Phase 1:** Project scaffolding, CLI, config, Notion API connection, rate limiting
 - [x] **Phase 2:** Block → Markdown transformation (all block types)
 - [x] **Phase 3:** Database → Obsidian Bases conversion
-- [ ] **Phase 4:** Attachments & incremental sync state
-- [ ] **Phase 5:** CI/CD, Docker, k8s manifests
-- [ ] **Phase 6:** `status` command
-- [ ] **Phase 7:** `validate` command
+- [ ] **Phase 4:** Attachment handling (download images/files, update paths)
+- [ ] **Phase 5:** Incremental sync (state tracking, change detection)
+- [ ] **Phase 6:** CI/CD, Docker, k8s manifests
+- [ ] **Phase 7:** `status` command
+- [ ] **Phase 8:** `validate` command
 
 ---
 
@@ -389,37 +390,68 @@ Verification:
 
 ---
 
-## Phase 4: Attachments & Incremental Sync
+## Phase 4: Attachment Handling
 
-**Goal:** Handle files and implement efficient incremental sync.
+**Goal:** Download and manage Notion-hosted files (images, PDFs, etc.).
 
 ### Agent Prompt
 ```
-Implement attachment handling and state management.
+Implement attachment handling in internal/transform/attachments.go.
 
-1. Attachment downloader (internal/transform/attachments.go):
+1. Attachment downloader:
    - Detect Notion-hosted URLs (contain secure.notion-static.com or prod-files-secure)
    - Download immediately when page is fetched (URLs expire in 1 hour!)
-   - Generate unique filenames, store in configured attachment folder
+   - Generate unique filenames based on content hash or original name
+   - Store in configured attachment folder
    - Update markdown references to local paths
 
-2. State management (internal/sync/state.go):
+2. Integration with block transformation:
+   - Hook into image, file, pdf, video, audio block processing
+   - Replace Notion URLs with local paths after download
+   - Handle download failures gracefully (log warning, keep original URL)
+
+Verification:
+- Write tests for Notion URL detection
+- Write tests for filename generation
+- Mock HTTP for attachment download tests
+- Run: go test ./... (must pass)
+- Run: go fmt ./...
+- Run: golangci-lint run
+- Run: docker build -t notoma . (must succeed)
+- Run: docker run --rm notoma --help (must show help)
+```
+
+---
+
+## Phase 5: Incremental Sync
+
+**Goal:** Track sync state and only process changed pages.
+
+### Agent Prompt
+```
+Implement state management and incremental sync logic.
+
+1. State management (internal/sync/state.go):
    - Track last sync time
    - Track page versions (last_edited_time per page ID)
    - Load/save state to JSON file
+   - Handle missing/corrupted state file gracefully
+
+2. Change detection:
    - Query API for pages modified since last sync
+   - Compare page last_edited_time with stored version
+   - Support --force flag to ignore state and do full resync
 
 3. Sync orchestration (internal/sync/sync.go):
    - Load state
-   - Fetch changed pages
+   - Fetch changed pages only (or all if --force)
    - For each page: fetch blocks, transform, download attachments, write
-   - Update state
+   - Update state after successful sync
 
 Verification:
-- Write tests for URL detection
-- Write tests for state persistence
-- Write tests for incremental sync logic
-- Mock HTTP for attachment download tests
+- Write tests for state persistence (save/load cycle)
+- Write tests for change detection logic
+- Write tests for --force flag behavior
 - Run: go test ./... (must pass)
 - Run: go test -race ./... (required for sync code)
 - Run: go fmt ./...
@@ -430,7 +462,7 @@ Verification:
 
 ---
 
-## Phase 5: Deployment & CI/CD
+## Phase 6: Deployment & CI/CD
 
 **Goal:** Containerize and deploy to k8s.
 
@@ -467,7 +499,7 @@ Verification:
 
 ---
 
-## Phase 6: Status Command
+## Phase 7: Status Command
 
 **Goal:** Implement `notoma status` to show sync state.
 
@@ -499,7 +531,7 @@ Verification:
 
 ---
 
-## Phase 7: Validate Command
+## Phase 8: Validate Command
 
 **Goal:** Implement `notoma validate` to check config and connectivity.
 

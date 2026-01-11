@@ -104,10 +104,11 @@ notoma/
 1. **Phase 1:** Project scaffolding, CLI, config, Notion API connection, rate limiting
 2. **Phase 2:** Block → Markdown transformation (all block types)
 3. **Phase 3:** Database → Obsidian Bases conversion
-4. **Phase 4:** Attachments & incremental sync state
-5. **Phase 5:** CI/CD, Docker, k8s manifests
-6. **Phase 6:** `status` command
-7. **Phase 7:** `validate` command
+4. **Phase 4:** Attachment handling (download images/files, update paths)
+5. **Phase 5:** Incremental sync (state tracking, change detection)
+6. **Phase 6:** CI/CD, Docker, k8s manifests
+7. **Phase 7:** `status` command
+8. **Phase 8:** `validate` command
 
 ## Reference Implementations
 
