@@ -508,7 +508,7 @@ func BuildDatabaseEntry(entry *EntryData, markdownContent string) (*DatabaseEntr
 	}
 
 	// Sanitize filename
-	filename := sanitizeFilename(entry.Title)
+	filename := SanitizeFilename(entry.Title)
 	if filename == "" {
 		filename = entry.PageID
 	}
@@ -520,8 +520,8 @@ func BuildDatabaseEntry(entry *EntryData, markdownContent string) (*DatabaseEntr
 	}, nil
 }
 
-// sanitizeFilename makes a string safe for use as a filename.
-func sanitizeFilename(name string) string {
+// SanitizeFilename makes a string safe for use as a filename.
+func SanitizeFilename(name string) string {
 	// Replace characters that are problematic in filenames
 	replacer := strings.NewReplacer(
 		"/", "-",

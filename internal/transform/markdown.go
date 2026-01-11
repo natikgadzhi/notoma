@@ -16,16 +16,34 @@ type BlockFetcher interface {
 
 // Transformer converts Notion blocks to Obsidian-flavored markdown.
 type Transformer struct {
-	fetcher BlockFetcher
-	ctx     context.Context
+	fetcher    BlockFetcher
+	downloader AttachmentDownloader
+	ctx        context.Context
+}
+
+// TransformerOption is a functional option for configuring the Transformer.
+type TransformerOption func(*Transformer)
+
+// WithDownloader sets the attachment downloader for the transformer.
+func WithDownloader(d AttachmentDownloader) TransformerOption {
+	return func(t *Transformer) {
+		t.downloader = d
+	}
 }
 
 // NewTransformer creates a new block transformer.
-func NewTransformer(ctx context.Context, fetcher BlockFetcher) *Transformer {
-	return &Transformer{
-		fetcher: fetcher,
-		ctx:     ctx,
+func NewTransformer(ctx context.Context, fetcher BlockFetcher, opts ...TransformerOption) *Transformer {
+	t := &Transformer{
+		fetcher:    fetcher,
+		downloader: &NullDownloader{},
+		ctx:        ctx,
 	}
+
+	for _, opt := range opts {
+		opt(t)
+	}
+
+	return t
 }
 
 // BlocksToMarkdown converts a slice of Notion blocks to markdown.
@@ -533,60 +551,88 @@ func (t *Transformer) tableToMarkdown(b *notionapi.TableBlock, indent string) (s
 
 // imageToMarkdown converts image blocks.
 func (t *Transformer) imageToMarkdown(b *notionapi.ImageBlock, indent string) (string, error) {
-	url := getMediaURL(b.Image.File, b.Image.External)
+	remoteURL := getMediaURL(b.Image.File, b.Image.External)
 	caption := ""
 	if len(b.Image.Caption) > 0 {
 		caption = RichTextToPlain(b.Image.Caption)
 	}
 
-	// TODO: During actual sync, download image and update URL to local path
-	return indent + "![" + caption + "](" + url + ")\n\n", nil
+	// Download attachment and get local path
+	localPath, err := t.downloader.Download(t.ctx, remoteURL)
+	if err != nil {
+		// Fall back to remote URL on download error
+		localPath = remoteURL
+	}
+
+	return indent + "![" + caption + "](" + localPath + ")\n\n", nil
 }
 
 // videoToMarkdown converts video blocks.
 func (t *Transformer) videoToMarkdown(b *notionapi.VideoBlock, indent string) (string, error) {
-	url := getMediaURL(b.Video.File, b.Video.External)
+	remoteURL := getMediaURL(b.Video.File, b.Video.External)
 	caption := ""
 	if len(b.Video.Caption) > 0 {
 		caption = RichTextToPlain(b.Video.Caption)
 	}
 
-	return indent + "![" + caption + "](" + url + ")\n\n", nil
+	// Download attachment and get local path
+	localPath, err := t.downloader.Download(t.ctx, remoteURL)
+	if err != nil {
+		localPath = remoteURL
+	}
+
+	return indent + "![" + caption + "](" + localPath + ")\n\n", nil
 }
 
 // fileToMarkdown converts file blocks.
 func (t *Transformer) fileToMarkdown(b *notionapi.FileBlock, indent string) (string, error) {
-	url := getMediaURL(b.File.File, b.File.External)
+	remoteURL := getMediaURL(b.File.File, b.File.External)
 	caption := "file"
 	if len(b.File.Caption) > 0 {
 		caption = RichTextToPlain(b.File.Caption)
 	}
 
-	// TODO: During actual sync, download file and update URL to local path
-	return indent + "[" + caption + "](" + url + ")\n\n", nil
+	// Download attachment and get local path
+	localPath, err := t.downloader.Download(t.ctx, remoteURL)
+	if err != nil {
+		localPath = remoteURL
+	}
+
+	return indent + "[" + caption + "](" + localPath + ")\n\n", nil
 }
 
 // pdfToMarkdown converts PDF blocks.
 func (t *Transformer) pdfToMarkdown(b *notionapi.PdfBlock, indent string) (string, error) {
-	url := getMediaURL(b.Pdf.File, b.Pdf.External)
+	remoteURL := getMediaURL(b.Pdf.File, b.Pdf.External)
 	caption := "PDF"
 	if len(b.Pdf.Caption) > 0 {
 		caption = RichTextToPlain(b.Pdf.Caption)
 	}
 
-	// TODO: During actual sync, download PDF and update URL to local path
-	return indent + "![" + caption + "](" + url + ")\n\n", nil
+	// Download attachment and get local path
+	localPath, err := t.downloader.Download(t.ctx, remoteURL)
+	if err != nil {
+		localPath = remoteURL
+	}
+
+	return indent + "![" + caption + "](" + localPath + ")\n\n", nil
 }
 
 // audioToMarkdown converts audio blocks.
 func (t *Transformer) audioToMarkdown(b *notionapi.AudioBlock, indent string) (string, error) {
-	url := getMediaURL(b.Audio.File, b.Audio.External)
+	remoteURL := getMediaURL(b.Audio.File, b.Audio.External)
 	caption := "audio"
 	if len(b.Audio.Caption) > 0 {
 		caption = RichTextToPlain(b.Audio.Caption)
 	}
 
-	return indent + "![" + caption + "](" + url + ")\n\n", nil
+	// Download attachment and get local path
+	localPath, err := t.downloader.Download(t.ctx, remoteURL)
+	if err != nil {
+		localPath = remoteURL
+	}
+
+	return indent + "![" + caption + "](" + localPath + ")\n\n", nil
 }
 
 // bookmarkToMarkdown converts bookmark blocks.

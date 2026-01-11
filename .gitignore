@@ -1,5 +1,5 @@
 # Binaries
-notoma
+/notoma
 *.exe
 *.exe~
 *.dll
