@@ -1,0 +1,28 @@
+# notion-sync configuration
+# Copy this file to config.yaml and customize for your setup
+
+sync:
+  roots:
+    # Add Notion page or database URLs here
+    # Get the URL by clicking "Share" -> "Copy link" in Notion
+    - url: "https://www.notion.so/your-workspace/Page-Title-abc123def456..."
+      name: "My Page"  # Optional friendly name for logging
+
+    # Database example (URLs with ?v= parameter)
+    - url: "https://www.notion.so/your-workspace/abc123...?v=xyz789..."
+      name: "My Database"
+
+output:
+  # Path to your Obsidian vault
+  vault_path: "/path/to/obsidian-vault"
+
+  # Folder for downloaded attachments (relative to vault_path)
+  attachment_folder: "_attachments"
+
+state:
+  # File to track sync state for incremental updates
+  file: "/path/to/notion-sync-state.json"
+
+options:
+  # Download images and files from Notion
+  download_attachments: true
