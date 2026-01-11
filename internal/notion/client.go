@@ -232,28 +232,38 @@ func (c *Client) SearchAll(ctx context.Context, filter string) ([]notionapi.Obje
 // DiscoverWorkspaceRoots finds all root-level pages and databases in the workspace.
 // Root items have a parent of type "workspace".
 func (c *Client) DiscoverWorkspaceRoots(ctx context.Context) ([]Resource, error) {
-	results, err := c.SearchAll(ctx, "")
+	// Notion API requires explicit filter type - we can't pass empty filter.
+	// So we search for pages and databases separately and combine results.
+	pages, err := c.SearchAll(ctx, "page")
 	if err != nil {
-		return nil, fmt.Errorf("searching workspace: %w", err)
+		return nil, fmt.Errorf("searching pages: %w", err)
+	}
+
+	databases, err := c.SearchAll(ctx, "database")
+	if err != nil {
+		return nil, fmt.Errorf("searching databases: %w", err)
 	}
 
 	var roots []Resource
-	for _, obj := range results {
-		switch item := obj.(type) {
-		case *notionapi.Page:
-			if item.Parent.Type == notionapi.ParentTypeWorkspace {
+	for _, obj := range pages {
+		if page, ok := obj.(*notionapi.Page); ok {
+			if page.Parent.Type == notionapi.ParentTypeWorkspace {
 				roots = append(roots, Resource{
-					ID:    string(item.ID),
+					ID:    string(page.ID),
 					Type:  ResourceTypePage,
-					Title: extractPageTitle(item),
+					Title: extractPageTitle(page),
 				})
 			}
-		case *notionapi.Database:
-			if item.Parent.Type == notionapi.ParentTypeWorkspace {
+		}
+	}
+
+	for _, obj := range databases {
+		if db, ok := obj.(*notionapi.Database); ok {
+			if db.Parent.Type == notionapi.ParentTypeWorkspace {
 				roots = append(roots, Resource{
-					ID:    string(item.ID),
+					ID:    string(db.ID),
 					Type:  ResourceTypeDatabase,
-					Title: extractDatabaseTitle(item),
+					Title: extractDatabaseTitle(db),
 				})
 			}
 		}
