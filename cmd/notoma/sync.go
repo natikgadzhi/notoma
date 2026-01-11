@@ -45,7 +45,11 @@ var syncCmd = &cobra.Command{
 to Obsidian-flavored markdown files in your vault.
 
 By default, it performs incremental sync - only fetching pages
-modified since the last sync. Use --force to perform a full resync.`,
+modified since the last sync. Use --force to perform a full resync.
+
+When running in a terminal, a TUI progress display is shown by default.
+Use --quiet to disable the TUI and show plain log output instead.
+Use --verbose to enable debug logging (shown alongside TUI or in quiet mode).`,
 	RunE: runSync,
 }
 
