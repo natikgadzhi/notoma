@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/joho/godotenv"
-	"github.com/jomei/notionapi"
 	"github.com/natikgadzhi/notion-based/internal/notion"
 )
 
@@ -61,23 +60,9 @@ func TestSmokeTestDatabaseEntries(t *testing.T) {
 	if len(pages) != expectedCount {
 		t.Errorf("expected %d entries in test database, got %d", expectedCount, len(pages))
 		for i, page := range pages {
-			t.Logf("  entry %d: %s", i+1, extractPageTitle(page))
+			t.Logf("  entry %d: %s", i+1, notion.ExtractPageTitle(&page))
 		}
 	}
 
 	t.Logf("Found %d entries in test database (expected %d)", len(pages), expectedCount)
-}
-
-// extractPageTitle extracts the title from a page's properties.
-func extractPageTitle(page notionapi.Page) string {
-	for _, prop := range page.Properties {
-		if titleProp, ok := prop.(*notionapi.TitleProperty); ok {
-			var result string
-			for _, rt := range titleProp.Title {
-				result += rt.PlainText
-			}
-			return result
-		}
-	}
-	return ""
 }

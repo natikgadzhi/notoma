@@ -123,7 +123,7 @@ func TestFilterWorkspaceRoots(t *testing.T) {
 						roots = append(roots, Resource{
 							ID:    string(item.ID),
 							Type:  ResourceTypePage,
-							Title: extractPageTitle(item),
+							Title: ExtractPageTitle(item),
 						})
 					}
 				case *notionapi.Database:
@@ -204,9 +204,9 @@ func TestExtractPageTitle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractPageTitle(tt.page)
+			got := ExtractPageTitle(tt.page)
 			if got != tt.want {
-				t.Errorf("extractPageTitle() = %q, want %q", got, tt.want)
+				t.Errorf("ExtractPageTitle() = %q, want %q", got, tt.want)
 			}
 		})
 	}
