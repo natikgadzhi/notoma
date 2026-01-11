@@ -9,11 +9,13 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/jomei/notionapi"
 	"github.com/lmittmann/tint"
 	"github.com/natikgadzhi/notion-based/internal/config"
 	"github.com/natikgadzhi/notion-based/internal/notion"
+	"github.com/natikgadzhi/notion-based/internal/sync"
 	"github.com/natikgadzhi/notion-based/internal/transform"
 	"github.com/natikgadzhi/notion-based/internal/tui"
 	"github.com/natikgadzhi/notion-based/internal/writer"
@@ -95,8 +97,25 @@ func runSync(cmd *cobra.Command, args []string) error {
 		logger.Info("dry-run mode enabled, no files will be written")
 	}
 
+	// Load sync state (or create new if --force or doesn't exist)
+	var state *sync.SyncState
 	if force {
-		logger.Info("force mode enabled, performing full resync")
+		logger.Info("force mode enabled, ignoring state and performing full resync")
+		state = sync.NewSyncState()
+	} else {
+		state, err = sync.LoadState(cfg.State.File)
+		if err != nil {
+			return fmt.Errorf("loading state: %w", err)
+		}
+		if state.ResourceCount() > 0 {
+			logger.Info("loaded sync state",
+				"resources", state.ResourceCount(),
+				"entries", state.EntryCount(),
+				"last_sync", state.LastSyncTime.Format(time.RFC3339),
+			)
+		} else {
+			logger.Info("no previous sync state found, performing full sync")
+		}
 	}
 
 	// Create Notion client
@@ -147,10 +166,22 @@ func runSync(cmd *cobra.Command, args []string) error {
 	// Process each root
 	var syncErr error
 	for _, root := range roots {
-		if err := processRoot(ctx, client, w, logger, cfg, root, dryRun, tuiRunner); err != nil {
+		if err := processRoot(ctx, client, w, logger, cfg, root, dryRun, state, tuiRunner); err != nil {
 			logger.Error("failed to process root", "url", root.URL, "error", err)
 			syncErr = err
 			// Continue with other roots
+		}
+	}
+
+	// Save state (unless dry-run)
+	if !dryRun {
+		if err := sync.SaveState(cfg.State.File, state); err != nil {
+			logger.Error("failed to save state", "error", err)
+			if syncErr == nil {
+				syncErr = err
+			}
+		} else {
+			logger.Info("saved sync state", "path", cfg.State.File)
 		}
 	}
 
@@ -165,7 +196,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	return syncErr
 }
 
-func processRoot(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, cfg *config.Config, root config.Root, dryRun bool, tuiRunner *tui.Runner) error {
+func processRoot(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, cfg *config.Config, root config.Root, dryRun bool, state *sync.SyncState, tuiRunner *tui.Runner) error {
 	// Parse URL to get ID
 	parsed, err := notion.ParseURL(root.URL)
 	if err != nil {
@@ -203,10 +234,10 @@ func processRoot(ctx context.Context, client *notion.Client, w *writer.Writer, l
 	var syncErr error
 	switch resource.Type {
 	case notion.ResourceTypePage:
-		syncErr = syncPage(ctx, client, w, logger, resource, name, dryRun, tuiRunner)
+		syncErr = syncPage(ctx, client, w, logger, resource, name, dryRun, state, tuiRunner)
 
 	case notion.ResourceTypeDatabase:
-		syncErr = syncDatabase(ctx, client, w, logger, resource, name, dryRun, tuiRunner)
+		syncErr = syncDatabase(ctx, client, w, logger, resource, name, dryRun, state, tuiRunner)
 	}
 
 	// Update TUI status
@@ -222,12 +253,31 @@ func processRoot(ctx context.Context, client *notion.Client, w *writer.Writer, l
 }
 
 // syncPage syncs a standalone page to the vault.
-func syncPage(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool, tuiRunner *tui.Runner) error {
+func syncPage(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool, state *sync.SyncState, tuiRunner *tui.Runner) error {
+	// Fetch page metadata to get LastEditedTime
+	page, err := client.GetPage(ctx, resource.ID)
+	if err != nil {
+		return fmt.Errorf("fetching page: %w", err)
+	}
+
+	lastModified := page.LastEditedTime
+
+	// Check if sync is needed
+	if !state.NeedsSync(resource.ID, lastModified) {
+		logger.Info("page unchanged, skipping", "title", resource.Title)
+		if tuiRunner != nil {
+			tuiRunner.SetDone(resource.ID)
+		}
+		return nil
+	}
+
 	// Fetch blocks
 	blocks, err := client.GetBlockChildren(ctx, resource.ID)
 	if err != nil {
 		return fmt.Errorf("fetching page blocks: %w", err)
 	}
+
+	filename := sanitizeFilename(resource.Title) + ".md"
 
 	if dryRun {
 		logger.Info("would sync page", "title", resource.Title, "blocks", len(blocks))
@@ -242,17 +292,25 @@ func syncPage(ctx context.Context, client *notion.Client, w *writer.Writer, logg
 	}
 
 	// Write markdown file
-	filename := sanitizeFilename(resource.Title) + ".md"
 	if err := w.WriteMarkdown("", filename, markdown); err != nil {
 		return fmt.Errorf("writing markdown: %w", err)
 	}
+
+	// Update state
+	state.SetResource(sync.ResourceState{
+		ID:           resource.ID,
+		Type:         sync.ResourceTypePage,
+		Title:        resource.Title,
+		LastModified: lastModified,
+		LocalPath:    filename,
+	})
 
 	logger.Info("synced page", "title", resource.Title, "file", filename)
 	return nil
 }
 
 // syncDatabase syncs a database and all its entries to the vault.
-func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool, tuiRunner *tui.Runner) error {
+func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, logger *slog.Logger, resource *notion.Resource, folderName string, dryRun bool, state *sync.SyncState, tuiRunner *tui.Runner) error {
 	// Fetch database schema
 	db, err := client.GetDatabase(ctx, resource.ID)
 	if err != nil {
@@ -274,6 +332,20 @@ func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, 
 	pages, err := client.QueryDatabase(ctx, resource.ID)
 	if err != nil {
 		return fmt.Errorf("querying database: %w", err)
+	}
+
+	// Initialize or get database state
+	dbState := state.GetResource(resource.ID)
+	if dbState == nil {
+		state.SetResource(sync.ResourceState{
+			ID:           resource.ID,
+			Type:         sync.ResourceTypeDatabase,
+			Title:        resource.Title,
+			LastModified: db.LastEditedTime,
+			LocalPath:    folder,
+			Entries:      make(map[string]sync.EntryState),
+		})
+		dbState = state.GetResource(resource.ID)
 	}
 
 	// Add child entries to TUI
@@ -319,65 +391,104 @@ func syncDatabase(ctx context.Context, client *notion.Client, w *writer.Writer, 
 
 	// Process each entry
 	transformer := transform.NewTransformer(ctx, client)
+	syncedCount := 0
+	skippedCount := 0
+
 	for _, page := range pages {
 		pageID := string(page.ID)
+		lastModified := page.LastEditedTime
+
+		// Check if entry needs sync
+		if !state.NeedsEntrySync(resource.ID, pageID, lastModified) {
+			skippedCount++
+			if tuiRunner != nil {
+				tuiRunner.SetDone(pageID)
+			}
+			continue
+		}
 
 		// Update TUI
 		if tuiRunner != nil {
 			tuiRunner.SetSyncing(pageID)
 		}
 
-		if err := syncDatabaseEntry(ctx, client, w, transformer, logger, &page, schema, folder); err != nil {
+		filename, err := syncDatabaseEntry(ctx, client, w, transformer, logger, &page, schema, folder)
+		if err != nil {
 			logger.Error("failed to sync entry", "id", page.ID, "error", err)
 			if tuiRunner != nil {
 				tuiRunner.SetError(pageID, err.Error())
 			}
 			// Continue with other entries
 		} else {
+			syncedCount++
+			// Update entry state
+			_ = state.SetEntry(resource.ID, sync.EntryState{
+				PageID:       pageID,
+				Title:        extractPageTitle(page),
+				LastModified: lastModified,
+				LocalFile:    filename,
+			})
 			if tuiRunner != nil {
 				tuiRunner.SetDone(pageID)
 			}
 		}
 	}
 
-	logger.Info("synced database", "title", resource.Title, "folder", folder, "entries", len(pages))
+	// Update database state with latest timestamp
+	state.SetResource(sync.ResourceState{
+		ID:           resource.ID,
+		Type:         sync.ResourceTypeDatabase,
+		Title:        resource.Title,
+		LastModified: db.LastEditedTime,
+		LocalPath:    folder,
+		Entries:      dbState.Entries,
+	})
+
+	logger.Info("synced database",
+		"title", resource.Title,
+		"folder", folder,
+		"synced", syncedCount,
+		"skipped", skippedCount,
+		"total", len(pages),
+	)
 	return nil
 }
 
 // syncDatabaseEntry syncs a single database entry.
-func syncDatabaseEntry(ctx context.Context, client *notion.Client, w *writer.Writer, transformer *transform.Transformer, logger *slog.Logger, page *notionapi.Page, schema *transform.DatabaseSchema, folder string) error {
+// Returns the filename written and any error.
+func syncDatabaseEntry(ctx context.Context, client *notion.Client, w *writer.Writer, transformer *transform.Transformer, logger *slog.Logger, page *notionapi.Page, schema *transform.DatabaseSchema, folder string) (string, error) {
 	// Extract entry data for frontmatter
 	entry, err := transform.ExtractEntryData(page, schema)
 	if err != nil {
-		return fmt.Errorf("extracting entry data: %w", err)
+		return "", fmt.Errorf("extracting entry data: %w", err)
 	}
 
 	// Fetch page content blocks
 	blocks, err := client.GetBlockChildren(ctx, string(page.ID))
 	if err != nil {
-		return fmt.Errorf("fetching entry blocks: %w", err)
+		return "", fmt.Errorf("fetching entry blocks: %w", err)
 	}
 
 	// Transform blocks to markdown
 	markdown, err := transformer.BlocksToMarkdown(blocks)
 	if err != nil {
-		return fmt.Errorf("transforming blocks: %w", err)
+		return "", fmt.Errorf("transforming blocks: %w", err)
 	}
 
 	// Build complete entry with frontmatter
 	dbEntry, err := transform.BuildDatabaseEntry(entry, markdown)
 	if err != nil {
-		return fmt.Errorf("building entry: %w", err)
+		return "", fmt.Errorf("building entry: %w", err)
 	}
 
 	// Write the file
 	content := dbEntry.Frontmatter + "\n" + dbEntry.Content
 	if err := w.WriteMarkdown(folder, dbEntry.Filename, content); err != nil {
-		return fmt.Errorf("writing entry: %w", err)
+		return "", fmt.Errorf("writing entry: %w", err)
 	}
 
 	logger.Debug("synced entry", "title", entry.Title, "file", dbEntry.Filename)
-	return nil
+	return dbEntry.Filename, nil
 }
 
 // isUUIDPrefix checks if the name looks like a truncated UUID (e.g., "1e567c00...").
