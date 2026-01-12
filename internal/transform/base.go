@@ -60,6 +60,7 @@ type DatabaseSchema struct {
 // EntryData represents the data for a single database entry.
 type EntryData struct {
 	Title      string
+	Icon       string // Emoji icon from Notion
 	Properties map[string]any
 	PageID     string
 }
@@ -260,6 +261,7 @@ func ExtractEntryData(page *notionapi.Page, schema *DatabaseSchema) (*EntryData,
 	entry := &EntryData{
 		Properties: make(map[string]any),
 		PageID:     string(page.ID),
+		Icon:       extractPageIcon(page),
 	}
 
 	for name, propValue := range page.Properties {
@@ -473,22 +475,41 @@ func extractRichText(richText []notionapi.RichText) string {
 	return sb.String()
 }
 
+// extractPageIcon extracts the emoji icon from a page's icon property.
+func extractPageIcon(page *notionapi.Page) string {
+	if page == nil || page.Icon == nil {
+		return ""
+	}
+	if page.Icon.Emoji != nil {
+		return string(*page.Icon.Emoji)
+	}
+	return ""
+}
+
 // GenerateFrontmatter creates YAML frontmatter for a database entry.
 func GenerateFrontmatter(entry *EntryData) (string, error) {
 	if entry == nil {
 		return "", fmt.Errorf("entry is nil")
 	}
 
-	if len(entry.Properties) == 0 {
-		return "", nil
-	}
-
-	// Add notion_id for tracking
+	// Build properties map
 	props := make(map[string]any)
 	for k, v := range entry.Properties {
 		props[k] = v
 	}
+
+	// Add notion_id for tracking
 	props["notion_id"] = entry.PageID
+
+	// Add icon if set
+	if entry.Icon != "" {
+		props["icon"] = entry.Icon
+	}
+
+	// If no properties to write, return empty
+	if len(props) == 0 {
+		return "", nil
+	}
 
 	data, err := yaml.Marshal(props)
 	if err != nil {

@@ -302,3 +302,139 @@ func TestExtractRichTextPlain(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractPageIcon(t *testing.T) {
+	rocketEmoji := notionapi.Emoji("🚀")
+	bookEmoji := notionapi.Emoji("📚")
+
+	tests := []struct {
+		name string
+		page *notionapi.Page
+		want string
+	}{
+		{
+			name: "nil page",
+			page: nil,
+			want: "",
+		},
+		{
+			name: "page with no icon",
+			page: &notionapi.Page{},
+			want: "",
+		},
+		{
+			name: "page with nil icon",
+			page: &notionapi.Page{
+				Icon: nil,
+			},
+			want: "",
+		},
+		{
+			name: "page with emoji icon",
+			page: &notionapi.Page{
+				Icon: &notionapi.Icon{
+					Emoji: &rocketEmoji,
+				},
+			},
+			want: "🚀",
+		},
+		{
+			name: "page with different emoji",
+			page: &notionapi.Page{
+				Icon: &notionapi.Icon{
+					Emoji: &bookEmoji,
+				},
+			},
+			want: "📚",
+		},
+		{
+			name: "page with external icon (not emoji)",
+			page: &notionapi.Page{
+				Icon: &notionapi.Icon{
+					Type: notionapi.FileTypeExternal,
+					External: &notionapi.FileObject{
+						URL: "https://example.com/icon.png",
+					},
+				},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractPageIcon(tt.page)
+			if got != tt.want {
+				t.Errorf("ExtractPageIcon() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractDatabaseIcon(t *testing.T) {
+	starEmoji := notionapi.Emoji("⭐")
+	checkEmoji := notionapi.Emoji("✅")
+
+	tests := []struct {
+		name string
+		db   *notionapi.Database
+		want string
+	}{
+		{
+			name: "nil database",
+			db:   nil,
+			want: "",
+		},
+		{
+			name: "database with no icon",
+			db:   &notionapi.Database{},
+			want: "",
+		},
+		{
+			name: "database with nil icon",
+			db: &notionapi.Database{
+				Icon: nil,
+			},
+			want: "",
+		},
+		{
+			name: "database with emoji icon",
+			db: &notionapi.Database{
+				Icon: &notionapi.Icon{
+					Emoji: &starEmoji,
+				},
+			},
+			want: "⭐",
+		},
+		{
+			name: "database with different emoji",
+			db: &notionapi.Database{
+				Icon: &notionapi.Icon{
+					Emoji: &checkEmoji,
+				},
+			},
+			want: "✅",
+		},
+		{
+			name: "database with external icon (not emoji)",
+			db: &notionapi.Database{
+				Icon: &notionapi.Icon{
+					Type: notionapi.FileTypeExternal,
+					External: &notionapi.FileObject{
+						URL: "https://example.com/icon.png",
+					},
+				},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractDatabaseIcon(tt.db)
+			if got != tt.want {
+				t.Errorf("ExtractDatabaseIcon() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

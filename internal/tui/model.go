@@ -32,6 +32,7 @@ const (
 type SyncItem struct {
 	ID       string
 	Title    string
+	Icon     string // Emoji icon from Notion (empty if not set)
 	Type     ItemType
 	Status   ItemStatus
 	Error    string
@@ -170,10 +171,13 @@ func (m Model) renderItem(b *strings.Builder, item *SyncItem) {
 		prefix = "├── "
 	}
 
-	// Icon based on type
-	icon := "📄"
-	if item.Type == TypeDatabase {
-		icon = "📚"
+	// Icon: use Notion emoji if set, otherwise default based on type
+	icon := item.Icon
+	if icon == "" {
+		icon = "📄"
+		if item.Type == TypeDatabase {
+			icon = "📚"
+		}
 	}
 
 	// Status indicator

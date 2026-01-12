@@ -686,8 +686,125 @@ func TestGenerateFrontmatter_Empty(t *testing.T) {
 		t.Fatalf("GenerateFrontmatter() error = %v", err)
 	}
 
-	if frontmatter != "" {
-		t.Errorf("expected empty frontmatter for empty properties, got %q", frontmatter)
+	// Should still contain notion_id even if properties are empty
+	if !contains(frontmatter, "notion_id: abc") {
+		t.Errorf("frontmatter should contain notion_id, got %q", frontmatter)
+	}
+}
+
+func TestGenerateFrontmatter_WithIcon(t *testing.T) {
+	entry := &EntryData{
+		Title:  "Test Entry",
+		PageID: "abc123",
+		Icon:   "🚀",
+		Properties: map[string]any{
+			"status": "Active",
+		},
+	}
+
+	frontmatter, err := GenerateFrontmatter(entry)
+	if err != nil {
+		t.Fatalf("GenerateFrontmatter() error = %v", err)
+	}
+
+	// Check it contains icon (YAML may format it differently)
+	if !contains(frontmatter, "icon:") {
+		t.Errorf("frontmatter should contain icon, got: %q", frontmatter)
+	}
+
+	// Check it's valid YAML
+	content := frontmatter[4 : len(frontmatter)-4] // Remove --- delimiters
+	var parsed map[string]any
+	if err := yaml.Unmarshal([]byte(content), &parsed); err != nil {
+		t.Fatalf("invalid YAML: %v", err)
+	}
+
+	// Verify icon is in parsed YAML
+	if parsed["icon"] != "🚀" {
+		t.Errorf("icon mismatch: got %v, want 🚀", parsed["icon"])
+	}
+}
+
+func TestGenerateFrontmatter_NoIcon(t *testing.T) {
+	entry := &EntryData{
+		Title:  "Test Entry",
+		PageID: "abc123",
+		Icon:   "", // Empty icon
+		Properties: map[string]any{
+			"status": "Active",
+		},
+	}
+
+	frontmatter, err := GenerateFrontmatter(entry)
+	if err != nil {
+		t.Fatalf("GenerateFrontmatter() error = %v", err)
+	}
+
+	// Should NOT contain icon field when icon is empty
+	if contains(frontmatter, "icon:") {
+		t.Error("frontmatter should not contain icon when empty")
+	}
+}
+
+func TestExtractEntryData_WithIcon(t *testing.T) {
+	rocketEmoji := notionapi.Emoji("🚀")
+
+	schema := &DatabaseSchema{
+		Title: "Test",
+		Properties: map[string]PropertyMapping{
+			"Name": {Name: "Name", Type: "text", IsTitle: true},
+		},
+		TitleProperty: "Name",
+	}
+
+	page := &notionapi.Page{
+		ID: "test-page-id",
+		Icon: &notionapi.Icon{
+			Emoji: &rocketEmoji,
+		},
+		Properties: notionapi.Properties{
+			"Name": &notionapi.TitleProperty{
+				Title: []notionapi.RichText{{PlainText: "Test Entry"}},
+			},
+		},
+	}
+
+	entry, err := ExtractEntryData(page, schema)
+	if err != nil {
+		t.Fatalf("ExtractEntryData() error = %v", err)
+	}
+
+	if entry.Icon != "🚀" {
+		t.Errorf("got icon %q, want %q", entry.Icon, "🚀")
+	}
+}
+
+func TestExtractEntryData_NoIcon(t *testing.T) {
+	schema := &DatabaseSchema{
+		Title: "Test",
+		Properties: map[string]PropertyMapping{
+			"Name": {Name: "Name", Type: "text", IsTitle: true},
+		},
+		TitleProperty: "Name",
+	}
+
+	page := &notionapi.Page{
+		ID: "test-page-id",
+		// No icon set
+		Properties: notionapi.Properties{
+			"Name": &notionapi.TitleProperty{
+				Title: []notionapi.RichText{{PlainText: "Test Entry"}},
+			},
+		},
+	}
+
+	entry, err := ExtractEntryData(page, schema)
+	if err != nil {
+		t.Fatalf("ExtractEntryData() error = %v", err)
+	}
+
+	if entry.Icon != "" {
+		t.Errorf("got icon %q, want empty string", entry.Icon)
 	}
 }
 

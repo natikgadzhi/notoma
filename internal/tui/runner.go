@@ -56,20 +56,22 @@ func (r *Runner) AddItem(item *SyncItem, parentID string) {
 }
 
 // AddRoot adds a root-level item (no parent).
-func (r *Runner) AddRoot(id, title string, itemType ItemType) {
+func (r *Runner) AddRoot(id, title, icon string, itemType ItemType) {
 	r.AddItem(&SyncItem{
 		ID:     id,
 		Title:  title,
+		Icon:   icon,
 		Type:   itemType,
 		Status: StatusPending,
 	}, "")
 }
 
 // AddChild adds a child item under a parent.
-func (r *Runner) AddChild(parentID, id, title string, itemType ItemType) {
+func (r *Runner) AddChild(parentID, id, title, icon string, itemType ItemType) {
 	r.AddItem(&SyncItem{
 		ID:     id,
 		Title:  title,
+		Icon:   icon,
 		Type:   itemType,
 		Status: StatusPending,
 	}, parentID)

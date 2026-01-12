@@ -25,6 +25,7 @@ type Resource struct {
 	ID             string
 	Type           ResourceType
 	Title          string
+	Icon           string // Emoji icon if set
 	LastEditedTime time.Time
 }
 
@@ -58,6 +59,7 @@ func (c *Client) DetectResourceType(ctx context.Context, id string) (*Resource, 
 			ID:             id,
 			Type:           ResourceTypePage,
 			Title:          ExtractPageTitle(page),
+			Icon:           ExtractPageIcon(page),
 			LastEditedTime: time.Time(page.LastEditedTime),
 		}, nil
 	}
@@ -74,6 +76,7 @@ func (c *Client) DetectResourceType(ctx context.Context, id string) (*Resource, 
 			ID:             id,
 			Type:           ResourceTypeDatabase,
 			Title:          extractDatabaseTitle(db),
+			Icon:           ExtractDatabaseIcon(db),
 			LastEditedTime: time.Time(db.LastEditedTime),
 		}, nil
 	}
@@ -256,6 +259,7 @@ func (c *Client) DiscoverWorkspaceRoots(ctx context.Context) ([]Resource, error)
 					ID:             string(page.ID),
 					Type:           ResourceTypePage,
 					Title:          ExtractPageTitle(page),
+					Icon:           ExtractPageIcon(page),
 					LastEditedTime: time.Time(page.LastEditedTime),
 				})
 			}
@@ -269,6 +273,7 @@ func (c *Client) DiscoverWorkspaceRoots(ctx context.Context) ([]Resource, error)
 					ID:             string(db.ID),
 					Type:           ResourceTypeDatabase,
 					Title:          extractDatabaseTitle(db),
+					Icon:           ExtractDatabaseIcon(db),
 					LastEditedTime: time.Time(db.LastEditedTime),
 				})
 			}
@@ -336,4 +341,28 @@ func extractRichTextPlain(richText []notionapi.RichText) string {
 		result += rt.PlainText
 	}
 	return result
+}
+
+// ExtractPageIcon extracts the emoji icon from a page's icon property.
+// Returns empty string if no emoji icon is set.
+func ExtractPageIcon(page *notionapi.Page) string {
+	if page == nil || page.Icon == nil {
+		return ""
+	}
+	if page.Icon.Emoji != nil {
+		return string(*page.Icon.Emoji)
+	}
+	return ""
+}
+
+// ExtractDatabaseIcon extracts the emoji icon from a database's icon property.
+// Returns empty string if no emoji icon is set.
+func ExtractDatabaseIcon(db *notionapi.Database) string {
+	if db == nil || db.Icon == nil {
+		return ""
+	}
+	if db.Icon.Emoji != nil {
+		return string(*db.Icon.Emoji)
+	}
+	return ""
 }
