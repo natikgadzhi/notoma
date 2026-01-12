@@ -269,7 +269,8 @@ func processRoot(sc *syncContext, root config.Root) error {
 	var syncErr error
 	switch resource.Type {
 	case notion.ResourceTypePage:
-		syncErr = syncPage(sc, resource, name)
+		// Pass empty folderPath to write pages at vault root (flat structure)
+		syncErr = syncPage(sc, resource, "")
 
 	case notion.ResourceTypeDatabase:
 		syncErr = syncDatabase(sc, resource, name)
