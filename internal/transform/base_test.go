@@ -198,7 +198,13 @@ func TestMapNotionPropertyType(t *testing.T) {
 			name:     "created time property",
 			propName: "Created",
 			prop:     &notionapi.CreatedTimePropertyConfig{Type: notionapi.PropertyConfigCreatedTime},
-			wantType: "datetime",
+			wantType: "date",
+		},
+		{
+			name:     "last edited time property",
+			propName: "Updated",
+			prop:     &notionapi.LastEditedTimePropertyConfig{Type: notionapi.PropertyConfigLastEditedTime},
+			wantType: "date",
 		},
 		{
 			name:     "status property",
@@ -369,6 +375,55 @@ func TestExtractEntryData(t *testing.T) {
 	// Check count property
 	if c, ok := entry.Properties["count"].(float64); !ok || c != 42 {
 		t.Errorf("got count %v, want 42", entry.Properties["count"])
+	}
+}
+
+func TestExtractEntryData_DateFields(t *testing.T) {
+	schema := &DatabaseSchema{
+		Title: "Test",
+		Properties: map[string]PropertyMapping{
+			"Name":             {Name: "Name", Type: "text", IsTitle: true},
+			"Created time":     {Name: "Created time", Type: "date"},
+			"Last edited time": {Name: "Last edited time", Type: "date"},
+		},
+		TitleProperty: "Name",
+	}
+
+	testTime := time.Date(2024, 6, 15, 10, 30, 0, 0, time.UTC)
+	page := &notionapi.Page{
+		ID: "test-page-id",
+		Properties: notionapi.Properties{
+			"Name": &notionapi.TitleProperty{
+				Title: []notionapi.RichText{{PlainText: "Test Entry"}},
+			},
+			"Created time": &notionapi.CreatedTimeProperty{
+				CreatedTime: testTime,
+			},
+			"Last edited time": &notionapi.LastEditedTimeProperty{
+				LastEditedTime: testTime,
+			},
+		},
+	}
+
+	entry, err := ExtractEntryData(page, schema)
+	if err != nil {
+		t.Fatalf("ExtractEntryData() error = %v", err)
+	}
+
+	// Verify created_time is renamed to created_at
+	if _, ok := entry.Properties["created_time"]; ok {
+		t.Error("should not have created_time, should be renamed to created_at")
+	}
+	if _, ok := entry.Properties["created_at"]; !ok {
+		t.Error("should have created_at property")
+	}
+
+	// Verify last_edited_time is renamed to updated_at
+	if _, ok := entry.Properties["last_edited_time"]; ok {
+		t.Error("should not have last_edited_time, should be renamed to updated_at")
+	}
+	if _, ok := entry.Properties["updated_at"]; !ok {
+		t.Error("should have updated_at property")
 	}
 }
 
@@ -694,6 +749,28 @@ func TestSanitizePropertyName(t *testing.T) {
 			got := sanitizePropertyName(tt.input)
 			if got != tt.want {
 				t.Errorf("sanitizePropertyName(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMapPropertyName(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"created_time", "created_at"},
+		{"last_edited_time", "updated_at"},
+		{"status", "status"},     // unchanged
+		{"due_date", "due_date"}, // unchanged
+		{"my_field", "my_field"}, // unchanged
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := mapPropertyName(tt.input)
+			if got != tt.want {
+				t.Errorf("mapPropertyName(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}

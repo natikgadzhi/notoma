@@ -146,13 +146,13 @@ func mapNotionPropertyType(name string, prop notionapi.PropertyConfig) PropertyM
 		mapping.Type = "list" // Will contain file paths
 
 	case notionapi.PropertyConfigCreatedTime:
-		mapping.Type = "datetime"
+		mapping.Type = "date"
 
 	case notionapi.PropertyConfigCreatedBy:
 		mapping.Type = "text"
 
 	case notionapi.PropertyConfigLastEditedTime:
-		mapping.Type = "datetime"
+		mapping.Type = "date"
 
 	case notionapi.PropertyConfigLastEditedBy:
 		mapping.Type = "text"
@@ -196,7 +196,8 @@ func GenerateBaseFile(schema *DatabaseSchema, folderPath string) (*BaseFile, err
 	// Add display names (property name -> display name mapping)
 	for name := range schema.Properties {
 		// Use the original Notion property name as display name
-		base.Display[sanitizePropertyName(name)] = name
+		propName := mapPropertyName(sanitizePropertyName(name))
+		base.Display[propName] = name
 	}
 
 	return base, nil
@@ -223,7 +224,7 @@ func buildViewColumns(schema *DatabaseSchema) []ViewColumn {
 	// Add other properties as columns
 	for _, name := range propNames {
 		columns = append(columns, ViewColumn{
-			Property: sanitizePropertyName(name),
+			Property: mapPropertyName(sanitizePropertyName(name)),
 		})
 	}
 
@@ -236,6 +237,21 @@ func sanitizePropertyName(name string) string {
 	name = strings.ReplaceAll(name, " ", "_")
 	name = strings.ToLower(name)
 	return name
+}
+
+// propertyNameMappings defines renames for specific Notion property names.
+// Maps from sanitized Notion name to Obsidian-friendly name.
+var propertyNameMappings = map[string]string{
+	"created_time":     "created_at",
+	"last_edited_time": "updated_at",
+}
+
+// mapPropertyName applies any special name mappings after sanitization.
+func mapPropertyName(sanitizedName string) string {
+	if mapped, ok := propertyNameMappings[sanitizedName]; ok {
+		return mapped
+	}
+	return sanitizedName
 }
 
 // MarshalBaseFile converts a BaseFile to YAML bytes.
@@ -263,8 +279,9 @@ func ExtractEntryData(page *notionapi.Page, schema *DatabaseSchema) (*EntryData,
 				entry.Title = strVal
 			}
 		} else if value != nil {
-			// Use sanitized property name for frontmatter
-			entry.Properties[sanitizePropertyName(name)] = value
+			// Use sanitized and mapped property name for frontmatter
+			propName := mapPropertyName(sanitizePropertyName(name))
+			entry.Properties[propName] = value
 		}
 	}
 
