@@ -368,13 +368,8 @@ func syncPageRecursive(sc *syncContext, resource *notion.Resource, folderPath st
 	// Extract and recursively sync child pages
 	childPages := extractChildPages(blocks)
 	if len(childPages) > 0 {
-		// Child pages go in a subfolder named after the parent page
+		// Child pages go in the same folder as parent (flat structure for Obsidian)
 		childFolder := folderPath
-		if childFolder == "" {
-			childFolder = sanitizeFilename(resource.Title)
-		} else {
-			childFolder = childFolder + "/" + sanitizeFilename(resource.Title)
-		}
 
 		sc.logger.Debug("found child pages", "parent", resource.Title, "count", len(childPages), "folder", childFolder)
 
@@ -503,13 +498,8 @@ func processChildPageWithBlocks(sc *syncContext, resource *notion.Resource, bloc
 	// Extract and recursively sync grandchildren
 	childPages := extractChildPages(blocks)
 	if len(childPages) > 0 {
-		// Grandchildren go in a subfolder named after this page
+		// Grandchildren go in the same folder as parent (flat structure for Obsidian)
 		childFolder := folderPath
-		if childFolder == "" {
-			childFolder = sanitizeFilename(resource.Title)
-		} else {
-			childFolder = childFolder + "/" + sanitizeFilename(resource.Title)
-		}
 
 		// Recursively sync grandchildren using the same parallel approach
 		// Build map of grandchild info and list of IDs to fetch
