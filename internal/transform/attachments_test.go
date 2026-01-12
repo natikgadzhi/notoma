@@ -17,8 +17,13 @@ func TestIsNotionHosted(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "notion-static.com URL",
-			url:      "https://prod-files-secure.s3.us-west-2.amazonaws.com/secure.notion-static.com/abc123/image.png",
+			name:     "prod-files-secure S3 URL",
+			url:      "https://prod-files-secure.s3.us-west-2.amazonaws.com/b3c89895-9b25-481d-a83d-2b78ea6c744b/1b9010af-65cb-4021-a378-b4a5a045fad9/file.vcf",
+			expected: true,
+		},
+		{
+			name:     "prod-files-secure S3 URL with query params",
+			url:      "https://prod-files-secure.s3.us-west-2.amazonaws.com/abc123/image.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=test",
 			expected: true,
 		},
 		{
@@ -39,6 +44,11 @@ func TestIsNotionHosted(t *testing.T) {
 		{
 			name:     "external URL - github",
 			url:      "https://raw.githubusercontent.com/user/repo/image.png",
+			expected: false,
+		},
+		{
+			name:     "external URL - generic S3",
+			url:      "https://my-bucket.s3.amazonaws.com/file.png",
 			expected: false,
 		},
 		{

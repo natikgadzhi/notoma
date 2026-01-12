@@ -83,7 +83,7 @@ func IsNotionHosted(rawURL string) bool {
 	host := strings.ToLower(parsed.Host)
 	return strings.Contains(host, "notion-static.com") ||
 		strings.Contains(host, "notion.so") ||
-		strings.Contains(host, "amazonaws.com") && strings.Contains(rawURL, "secure.notion")
+		strings.Contains(host, "prod-files-secure")
 }
 
 // Download downloads an attachment from the given URL.
