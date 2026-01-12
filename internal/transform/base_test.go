@@ -198,13 +198,13 @@ func TestMapNotionPropertyType(t *testing.T) {
 			name:     "created time property",
 			propName: "Created",
 			prop:     &notionapi.CreatedTimePropertyConfig{Type: notionapi.PropertyConfigCreatedTime},
-			wantType: "date",
+			wantType: "datetime", // CreatedTime always includes timestamp
 		},
 		{
 			name:     "last edited time property",
 			propName: "Updated",
 			prop:     &notionapi.LastEditedTimePropertyConfig{Type: notionapi.PropertyConfigLastEditedTime},
-			wantType: "date",
+			wantType: "datetime", // LastEditedTime always includes timestamp
 		},
 		{
 			name:     "status property",
@@ -499,8 +499,12 @@ func TestExtractPropertyValue_MultiSelect(t *testing.T) {
 }
 
 func TestExtractPropertyValue_Date(t *testing.T) {
-	startTime := notionapi.Date(time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC))
-	endTime := notionapi.Date(time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC))
+	// Date-only (midnight) - should return YYYY-MM-DD format
+	startDate := notionapi.Date(time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC))
+	endDate := notionapi.Date(time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC))
+	// DateTime (non-midnight) - should return full ISO format
+	startDateTime := notionapi.Date(time.Date(2024, 1, 15, 14, 30, 0, 0, time.UTC))
+	endDateTime := notionapi.Date(time.Date(2024, 1, 20, 18, 45, 0, 0, time.UTC))
 
 	tests := []struct {
 		name string
@@ -508,23 +512,42 @@ func TestExtractPropertyValue_Date(t *testing.T) {
 		want string
 	}{
 		{
-			name: "date only",
+			name: "date only (midnight)",
 			prop: &notionapi.DateProperty{
 				Date: &notionapi.DateObject{
-					Start: &startTime,
+					Start: &startDate,
 				},
 			},
-			want: "2024-01-15T00:00:00Z",
+			want: "2024-01-15", // Date-only format for Obsidian date type
 		},
 		{
-			name: "date range",
+			name: "date range (midnight)",
 			prop: &notionapi.DateProperty{
 				Date: &notionapi.DateObject{
-					Start: &startTime,
-					End:   &endTime,
+					Start: &startDate,
+					End:   &endDate,
 				},
 			},
-			want: "2024-01-15T00:00:00Z/2024-01-20T00:00:00Z",
+			want: "2024-01-15/2024-01-20", // Date-only format for both
+		},
+		{
+			name: "datetime (non-midnight)",
+			prop: &notionapi.DateProperty{
+				Date: &notionapi.DateObject{
+					Start: &startDateTime,
+				},
+			},
+			want: "2024-01-15T14:30:00Z", // Full datetime for Obsidian datetime type
+		},
+		{
+			name: "datetime range (non-midnight)",
+			prop: &notionapi.DateProperty{
+				Date: &notionapi.DateObject{
+					Start: &startDateTime,
+					End:   &endDateTime,
+				},
+			},
+			want: "2024-01-15T14:30:00Z/2024-01-20T18:45:00Z", // Full datetime for both
 		},
 		{
 			name: "nil date",
