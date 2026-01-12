@@ -257,7 +257,7 @@ func processRoot(sc *syncContext, root config.Root) error {
 		if resource.Type == notion.ResourceTypeDatabase {
 			itemType = tui.TypeDatabase
 		}
-		sc.tuiRunner.AddRoot(resource.ID, resource.Title, itemType)
+		sc.tuiRunner.AddRoot(resource.ID, resource.Title, resource.Icon, itemType)
 		sc.tuiRunner.SetSyncing(resource.ID)
 	}
 
@@ -381,8 +381,9 @@ func syncPageRecursive(sc *syncContext, resource *notion.Resource, folderPath st
 			}
 
 			// Add child to TUI if available
+			// Note: child pages from blocks don't have icon data, pass empty for default
 			if sc.tuiRunner != nil {
-				sc.tuiRunner.AddChild(resource.ID, child.id, child.title, tui.TypePage)
+				sc.tuiRunner.AddChild(resource.ID, child.id, child.title, "", tui.TypePage)
 				sc.tuiRunner.SetSyncing(child.id)
 			}
 
@@ -467,7 +468,8 @@ func syncDatabase(sc *syncContext, resource *notion.Resource, folderName string)
 			if title == "" {
 				title = string(page.ID)[:8] + "..."
 			}
-			sc.tuiRunner.AddChild(resource.ID, string(page.ID), title, tui.TypePage)
+			icon := notion.ExtractPageIcon(&page)
+			sc.tuiRunner.AddChild(resource.ID, string(page.ID), title, icon, tui.TypePage)
 		}
 	}
 
