@@ -117,3 +117,49 @@ func (c *Config) Validate() error {
 
 	return nil
 }
+
+// LoadForZipImport reads configuration for zip import mode.
+// This only requires output path and state file, not Notion token or roots.
+func LoadForZipImport(path string) (*Config, error) {
+	// Try to load .env file (ignore error if file doesn't exist)
+	_ = godotenv.Load()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading config file: %w", err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing config file: %w", err)
+	}
+
+	// Don't require NOTION_TOKEN for zip import
+	cfg.NotionToken = os.Getenv("NOTION_TOKEN")
+
+	if err := cfg.ValidateForZipImport(); err != nil {
+		return nil, fmt.Errorf("validating config: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+// ValidateForZipImport checks configuration for zip import mode.
+// Only output path and state file are required.
+func (c *Config) ValidateForZipImport() error {
+	var errs []error
+
+	if c.Output.VaultPath == "" {
+		errs = append(errs, errors.New("output.vault_path is required"))
+	}
+
+	if c.State.File == "" {
+		errs = append(errs, errors.New("state.file is required"))
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
+}

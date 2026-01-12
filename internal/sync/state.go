@@ -351,3 +351,17 @@ func (s *SyncState) AllLocalPaths() []string {
 	}
 	return paths
 }
+
+// AllDatabaseIDs returns a list of all database resource IDs (local paths) in the state.
+func (s *SyncState) AllDatabaseIDs() []string {
+	if s == nil || s.Resources == nil {
+		return nil
+	}
+	var ids []string
+	for _, res := range s.Resources {
+		if res.Type == ResourceTypeDatabase {
+			ids = append(ids, res.LocalPath)
+		}
+	}
+	return ids
+}

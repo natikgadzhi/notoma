@@ -16,14 +16,16 @@ import (
 	"github.com/natikgadzhi/notion-based/internal/transform"
 	"github.com/natikgadzhi/notion-based/internal/tui"
 	"github.com/natikgadzhi/notion-based/internal/writer"
+	"github.com/natikgadzhi/notion-based/internal/zipimport"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
 
 var (
-	dryRun bool
-	force  bool
-	quiet  bool // quiet disables TUI and shows plain log output
+	dryRun  bool
+	force   bool
+	quiet   bool   // quiet disables TUI and shows plain log output
+	fromZip string // path to Notion zip export file for initial import
 )
 
 // syncContext holds dependencies for sync operations, reducing parameter count.
@@ -49,7 +51,12 @@ modified since the last sync. Use --force to perform a full resync.
 
 When running in a terminal, a TUI progress display is shown by default.
 Use --quiet to disable the TUI and show plain log output instead.
-Use --verbose to enable debug logging (shown alongside TUI or in quiet mode).`,
+Use --verbose to enable debug logging (shown alongside TUI or in quiet mode).
+
+You can also import from a Notion zip export instead of using the API:
+  notoma sync --from-zip export.zip --config config.yaml
+
+This is useful for initial imports when you have a full workspace export.`,
 	RunE: runSync,
 }
 
@@ -59,12 +66,14 @@ func init() {
 	syncCmd.Flags().BoolVarP(&force, "force", "f", false, "ignore state and perform full resync")
 	syncCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "enable verbose logging")
 	syncCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "disable TUI, use plain log output")
+	syncCmd.Flags().StringVar(&fromZip, "from-zip", "", "path to Notion zip export file for initial import")
 }
 
 func runSync(cmd *cobra.Command, args []string) error {
 	// Determine if we should use TUI mode
 	// Use TUI by default if stdout is a TTY and quiet mode is not enabled
-	useTUI := !quiet && term.IsTerminal(int(os.Stdout.Fd()))
+	// Disable TUI for zip import (simpler progress reporting)
+	useTUI := !quiet && fromZip == "" && term.IsTerminal(int(os.Stdout.Fd()))
 
 	// Set up logging - suppress in TUI mode unless verbose
 	var logOutput io.Writer = os.Stderr
@@ -77,15 +86,30 @@ func runSync(cmd *cobra.Command, args []string) error {
 	ctx, cancel := setupSignalHandler(logger)
 	defer cancel()
 
-	// Load configuration
+	// Load configuration (different validation for zip import)
 	logger.Info("loading configuration", "path", configPath)
-	cfg, err := config.Load(configPath)
-	if err != nil {
-		return fmt.Errorf("loading config: %w", err)
+	var cfg *config.Config
+	if fromZip != "" {
+		var err error
+		cfg, err = config.LoadForZipImport(configPath)
+		if err != nil {
+			return fmt.Errorf("loading config: %w", err)
+		}
+	} else {
+		var err error
+		cfg, err = config.Load(configPath)
+		if err != nil {
+			return fmt.Errorf("loading config: %w", err)
+		}
 	}
 
 	if dryRun {
 		logger.Info("dry-run mode enabled, no files will be written")
+	}
+
+	// Handle zip import mode
+	if fromZip != "" {
+		return runZipImport(ctx, cfg, logger)
 	}
 
 	// Load sync state (or create new if --force or doesn't exist)
@@ -94,6 +118,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 		logger.Info("force mode enabled, ignoring state and performing full resync")
 		state = sync.NewSyncState()
 	} else {
+		var err error
 		state, err = sync.LoadState(cfg.State.File)
 		if err != nil {
 			return fmt.Errorf("loading state: %w", err)
@@ -650,4 +675,53 @@ func sanitizeFilename(name string) string {
 	}
 
 	return name
+}
+
+// runZipImport handles importing from a Notion zip export file.
+func runZipImport(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
+	logger.Info("importing from Notion zip export", "file", fromZip)
+
+	opts := zipimport.ImportOptions{
+		ZipPath:          fromZip,
+		VaultPath:        cfg.Output.VaultPath,
+		AttachmentFolder: cfg.Output.AttachmentFolder,
+		StateFile:        cfg.State.File,
+		DryRun:           dryRun,
+		Force:            force,
+	}
+
+	importer, err := zipimport.NewImporter(opts, logger)
+	if err != nil {
+		return fmt.Errorf("creating importer: %w", err)
+	}
+
+	result, err := importer.Import(ctx)
+	if err != nil {
+		return fmt.Errorf("import failed: %w", err)
+	}
+
+	// Save state (unless dry-run)
+	if !dryRun {
+		if err := sync.SaveState(cfg.State.File, importer.GetState()); err != nil {
+			return fmt.Errorf("saving state: %w", err)
+		}
+		logger.Info("saved sync state", "path", cfg.State.File)
+	}
+
+	// Report results
+	logger.Info("import complete",
+		"pages", result.PagesImported,
+		"databases", result.DatabasesImported,
+		"attachments", result.AttachmentsCopied,
+		"errors", len(result.Errors),
+	)
+
+	if len(result.Errors) > 0 {
+		for _, e := range result.Errors {
+			logger.Error("import error", "error", e)
+		}
+		return fmt.Errorf("import completed with %d errors", len(result.Errors))
+	}
+
+	return nil
 }
