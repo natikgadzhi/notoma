@@ -25,8 +25,9 @@ func TestDefaultRateLimiter(t *testing.T) {
 		t.Errorf("expected refillRate 3.0, got %f", limiter.refillRate)
 	}
 
-	if limiter.maxTokens != 5 {
-		t.Errorf("expected maxTokens 5, got %f", limiter.maxTokens)
+	// Default burst is 10 to enable parallel fetching
+	if limiter.maxTokens != 10 {
+		t.Errorf("expected maxTokens 10, got %f", limiter.maxTokens)
 	}
 }
 
@@ -153,5 +154,53 @@ func TestRateLimiter_TokenRefill(t *testing.T) {
 	// Should be relatively quick since tokens refilled
 	if elapsed > 100*time.Millisecond {
 		t.Errorf("request after refill took too long: %v", elapsed)
+	}
+}
+
+func TestRateLimiter_AdaptiveBackoff(t *testing.T) {
+	limiter := NewRateLimiter(10.0, 5)
+
+	// First throttle: should use base duration
+	limiter.SetRetryAfter(100 * time.Millisecond)
+	if limiter.consecutiveThrottles != 1 {
+		t.Errorf("expected 1 consecutive throttle, got %d", limiter.consecutiveThrottles)
+	}
+
+	// Second throttle immediately after: should increase
+	limiter.SetRetryAfter(100 * time.Millisecond)
+	if limiter.consecutiveThrottles != 2 {
+		t.Errorf("expected 2 consecutive throttles, got %d", limiter.consecutiveThrottles)
+	}
+
+	// Reset should clear after enough time
+	limiter.lastThrottleTime = time.Now().Add(-15 * time.Second)
+	limiter.ResetThrottleState()
+	if limiter.consecutiveThrottles != 0 {
+		t.Errorf("expected 0 consecutive throttles after reset, got %d", limiter.consecutiveThrottles)
+	}
+}
+
+func TestRateLimiter_ConcurrentWait(t *testing.T) {
+	limiter := NewRateLimiter(100.0, 10) // High rate for test
+	ctx := context.Background()
+
+	// Launch 10 concurrent goroutines
+	done := make(chan bool, 10)
+	for i := 0; i < 10; i++ {
+		go func() {
+			if err := limiter.Wait(ctx); err != nil {
+				t.Errorf("concurrent Wait() error = %v", err)
+			}
+			done <- true
+		}()
+	}
+
+	// Wait for all to complete
+	for i := 0; i < 10; i++ {
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("concurrent Wait() timed out")
+		}
 	}
 }
