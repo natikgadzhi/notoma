@@ -15,9 +15,9 @@ import (
 // See: https://help.obsidian.md/bases/syntax
 type BaseFile struct {
 	Filters  *FilterGroup      `yaml:"filters,omitempty"`
+	Formulas map[string]string `yaml:"formulas,omitempty"`
 	Display  map[string]string `yaml:"display,omitempty"`
 	Views    []View            `yaml:"views"`
-	Formulas map[string]string `yaml:"formula,omitempty"`
 }
 
 // FilterGroup represents a group of filters with AND/OR logic.
@@ -28,23 +28,18 @@ type FilterGroup struct {
 
 // View represents a single view configuration in a base file.
 type View struct {
-	Type    string       `yaml:"type"`
-	Name    string       `yaml:"name"`
-	Columns []ViewColumn `yaml:"columns,omitempty"`
-	Order   []ViewOrder  `yaml:"order,omitempty"`
-	Filters *FilterGroup `yaml:"filters,omitempty"`
+	Type       string         `yaml:"type"`
+	Name       string         `yaml:"name"`
+	Order      []string       `yaml:"order,omitempty"`      // Column order (list of property names)
+	Sort       []ViewSort     `yaml:"sort,omitempty"`       // Sort configuration
+	ColumnSize map[string]int `yaml:"columnSize,omitempty"` // Column widths
+	Filters    *FilterGroup   `yaml:"filters,omitempty"`    // View-specific filters
 }
 
-// ViewColumn represents a column in a table view.
-type ViewColumn struct {
-	Property string `yaml:"property"`
-	Width    int    `yaml:"width,omitempty"`
-}
-
-// ViewOrder represents sorting order for a view.
-type ViewOrder struct {
-	Property string `yaml:"property"`
-	Order    string `yaml:"order"` // "asc" or "desc"
+// ViewSort represents sorting configuration for a view.
+type ViewSort struct {
+	Property  string `yaml:"property"`
+	Direction string `yaml:"direction"` // "ASC" or "DESC"
 }
 
 // PropertyMapping maps a Notion property to Obsidian frontmatter.
@@ -177,17 +172,16 @@ func GenerateBaseFile(schema *DatabaseSchema, folderPath string) (*BaseFile, err
 		Filters: &FilterGroup{
 			And: []string{
 				fmt.Sprintf("file.inFolder(\"%s\")", folderPath),
-				"file.ext == \"md\"",
 			},
 		},
 		Display: make(map[string]string),
 		Views: []View{
 			{
-				Type:    "table",
-				Name:    "Table",
-				Columns: buildViewColumns(schema),
-				Order: []ViewOrder{
-					{Property: "file.name", Order: "asc"},
+				Type:  "table",
+				Name:  "Table",
+				Order: buildColumnOrder(schema),
+				Sort: []ViewSort{
+					{Property: "file.name", Direction: "ASC"},
 				},
 			},
 		},
@@ -203,12 +197,12 @@ func GenerateBaseFile(schema *DatabaseSchema, folderPath string) (*BaseFile, err
 	return base, nil
 }
 
-// buildViewColumns creates the columns for the default table view.
-func buildViewColumns(schema *DatabaseSchema) []ViewColumn {
-	var columns []ViewColumn
+// buildColumnOrder creates the column order list for the default table view.
+func buildColumnOrder(schema *DatabaseSchema) []string {
+	var order []string
 
 	// Always start with file name column
-	columns = append(columns, ViewColumn{Property: "file.name"})
+	order = append(order, "file.name")
 
 	// Get property names and sort them for consistent output
 	var propNames []string
@@ -223,12 +217,10 @@ func buildViewColumns(schema *DatabaseSchema) []ViewColumn {
 
 	// Add other properties as columns
 	for _, name := range propNames {
-		columns = append(columns, ViewColumn{
-			Property: mapPropertyName(sanitizePropertyName(name)),
-		})
+		order = append(order, mapPropertyName(sanitizePropertyName(name)))
 	}
 
-	return columns
+	return order
 }
 
 // sanitizePropertyName converts a property name to be valid in YAML/bases.
