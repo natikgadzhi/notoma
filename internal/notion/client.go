@@ -289,12 +289,21 @@ func (c *Client) handleError(err error) error {
 	var apiErr *notionapi.Error
 	if errors.As(err, &apiErr) {
 		if apiErr.Status == http.StatusTooManyRequests {
-			// Handle rate limiting - use default 1 second if no Retry-After
-			c.limiter.SetRetryAfter(ParseRetryAfter(""))
-			c.logger.Warn("rate limited by Notion API")
+			// Parse Retry-After from error message if available
+			// The notionapi library doesn't expose headers directly,
+			// so we use the default which will be adaptively increased
+			retryDuration := ParseRetryAfter("")
+			c.limiter.SetRetryAfter(retryDuration)
+			c.logger.Warn("rate limited by Notion API", "retry_after", retryDuration)
 		}
 	}
 	return err
+}
+
+// MarkRequestSuccess should be called after successful API requests
+// to help the rate limiter track that we're not being throttled.
+func (c *Client) MarkRequestSuccess() {
+	c.limiter.ResetThrottleState()
 }
 
 // isNotFoundOrWrongTypeError checks if the error indicates a resource was not found
