@@ -42,7 +42,13 @@ func richTextSegmentToMarkdown(rt notionapi.RichText) string {
 			// For now, extract page ID and create a placeholder wiki-link
 			text = convertNotionLink(rt.PlainText, rt.Href)
 		} else {
-			text = "[" + text + "](" + rt.Href + ")"
+			// If text is empty (e.g., Notion "chip" links like Google Docs),
+			// just use the URL directly - Obsidian will auto-link it
+			if text == "" {
+				text = rt.Href
+			} else {
+				text = "[" + text + "](" + rt.Href + ")"
+			}
 		}
 	}
 

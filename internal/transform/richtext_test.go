@@ -113,6 +113,16 @@ func TestRichTextToMarkdown(t *testing.T) {
 			want: "[link](https://example.com)",
 		},
 		{
+			name: "external link with empty title",
+			richText: []notionapi.RichText{
+				{
+					PlainText: "",
+					Href:      "https://docs.google.com/document/d/123",
+				},
+			},
+			want: "https://docs.google.com/document/d/123",
+		},
+		{
 			name: "mixed formatting",
 			richText: []notionapi.RichText{
 				{PlainText: "This is "},
