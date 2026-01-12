@@ -12,7 +12,7 @@ build:
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/notoma
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) test-output test-state.json
 
 test:
 	go test ./...
