@@ -283,7 +283,21 @@ func processRoot(sc *syncContext, root config.Root) error {
 }
 
 // syncPage syncs a standalone page to the vault.
-func syncPage(sc *syncContext, resource *notion.Resource, folderName string) error {
+// folderPath specifies where to write the page (empty for vault root).
+func syncPage(sc *syncContext, resource *notion.Resource, folderPath string) error {
+	return syncPageRecursive(sc, resource, folderPath, make(map[string]bool))
+}
+
+// syncPageRecursive syncs a page and all its child pages recursively.
+// visited tracks already-synced page IDs to prevent infinite loops.
+func syncPageRecursive(sc *syncContext, resource *notion.Resource, folderPath string, visited map[string]bool) error {
+	// Check for cycles
+	if visited[resource.ID] {
+		sc.logger.Debug("skipping already visited page", "id", resource.ID, "title", resource.Title)
+		return nil
+	}
+	visited[resource.ID] = true
+
 	// Fetch page metadata to get LastEditedTime
 	page, err := sc.client.GetPage(sc.ctx, resource.ID)
 	if err != nil {
@@ -308,41 +322,103 @@ func syncPage(sc *syncContext, resource *notion.Resource, folderName string) err
 	}
 
 	filename := sanitizeFilename(resource.Title) + ".md"
+	localPath := filename
+	if folderPath != "" {
+		localPath = folderPath + "/" + filename
+	}
 
 	if sc.dryRun {
-		sc.logger.Info("would sync page", "title", resource.Title, "blocks", len(blocks))
-		return nil
-	}
-
-	// Transform blocks to markdown (with attachment downloading if enabled)
-	var transformer *transform.Transformer
-	if sc.attDownloader != nil {
-		transformer = transform.NewTransformerWithAttachments(sc.ctx, sc.client, sc.attDownloader)
+		sc.logger.Info("would sync page", "title", resource.Title, "blocks", len(blocks), "path", localPath)
 	} else {
-		transformer = transform.NewTransformer(sc.ctx, sc.client)
+		// Transform blocks to markdown (with attachment downloading if enabled)
+		var transformer *transform.Transformer
+		if sc.attDownloader != nil {
+			transformer = transform.NewTransformerWithAttachments(sc.ctx, sc.client, sc.attDownloader)
+		} else {
+			transformer = transform.NewTransformer(sc.ctx, sc.client)
+		}
+
+		markdown, err := transformer.BlocksToMarkdown(blocks)
+		if err != nil {
+			return fmt.Errorf("transforming blocks: %w", err)
+		}
+
+		// Write markdown file
+		if err := sc.writer.WriteMarkdown(folderPath, filename, markdown); err != nil {
+			return fmt.Errorf("writing markdown: %w", err)
+		}
+
+		// Update state
+		sc.state.SetResource(sync.ResourceState{
+			ID:           resource.ID,
+			Type:         sync.ResourceTypePage,
+			Title:        resource.Title,
+			LastModified: lastModified,
+			LocalPath:    localPath,
+		})
+
+		sc.logger.Info("synced page", "title", resource.Title, "file", localPath)
 	}
 
-	markdown, err := transformer.BlocksToMarkdown(blocks)
-	if err != nil {
-		return fmt.Errorf("transforming blocks: %w", err)
+	// Extract and recursively sync child pages
+	childPages := extractChildPages(blocks)
+	if len(childPages) > 0 {
+		// Child pages go in a subfolder named after the parent page
+		childFolder := folderPath
+		if childFolder == "" {
+			childFolder = sanitizeFilename(resource.Title)
+		} else {
+			childFolder = childFolder + "/" + sanitizeFilename(resource.Title)
+		}
+
+		sc.logger.Debug("found child pages", "parent", resource.Title, "count", len(childPages), "folder", childFolder)
+
+		for _, child := range childPages {
+			childResource := &notion.Resource{
+				ID:    child.id,
+				Type:  notion.ResourceTypePage,
+				Title: child.title,
+			}
+
+			// Add child to TUI if available
+			if sc.tuiRunner != nil {
+				sc.tuiRunner.AddChild(resource.ID, child.id, child.title, tui.TypePage)
+				sc.tuiRunner.SetSyncing(child.id)
+			}
+
+			if err := syncPageRecursive(sc, childResource, childFolder, visited); err != nil {
+				sc.logger.Error("failed to sync child page", "parent", resource.Title, "child", child.title, "error", err)
+				if sc.tuiRunner != nil {
+					sc.tuiRunner.SetError(child.id, err.Error())
+				}
+				// Continue with other children
+			} else if sc.tuiRunner != nil {
+				sc.tuiRunner.SetDone(child.id)
+			}
+		}
 	}
 
-	// Write markdown file
-	if err := sc.writer.WriteMarkdown("", filename, markdown); err != nil {
-		return fmt.Errorf("writing markdown: %w", err)
-	}
-
-	// Update state
-	sc.state.SetResource(sync.ResourceState{
-		ID:           resource.ID,
-		Type:         sync.ResourceTypePage,
-		Title:        resource.Title,
-		LastModified: lastModified,
-		LocalPath:    filename,
-	})
-
-	sc.logger.Info("synced page", "title", resource.Title, "file", filename)
 	return nil
+}
+
+// childPageInfo holds basic info about a child page found in blocks.
+type childPageInfo struct {
+	id    string
+	title string
+}
+
+// extractChildPages scans blocks for ChildPageBlock items and returns their IDs and titles.
+func extractChildPages(blocks []notionapi.Block) []childPageInfo {
+	var children []childPageInfo
+	for _, block := range blocks {
+		if cpb, ok := block.(*notionapi.ChildPageBlock); ok {
+			children = append(children, childPageInfo{
+				id:    string(cpb.ID),
+				title: cpb.ChildPage.Title,
+			})
+		}
+	}
+	return children
 }
 
 // syncDatabase syncs a database and all its entries to the vault.
