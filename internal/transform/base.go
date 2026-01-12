@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jomei/notionapi"
 	"gopkg.in/yaml.v3"
@@ -141,13 +142,13 @@ func mapNotionPropertyType(name string, prop notionapi.PropertyConfig) PropertyM
 		mapping.Type = "list" // Will contain file paths
 
 	case notionapi.PropertyConfigCreatedTime:
-		mapping.Type = "date"
+		mapping.Type = "datetime" // CreatedTime always includes timestamp
 
 	case notionapi.PropertyConfigCreatedBy:
 		mapping.Type = "text"
 
 	case notionapi.PropertyConfigLastEditedTime:
-		mapping.Type = "date"
+		mapping.Type = "datetime" // LastEditedTime always includes timestamp
 
 	case notionapi.PropertyConfigLastEditedBy:
 		mapping.Type = "text"
@@ -320,9 +321,9 @@ func extractPropertyValue(prop notionapi.Property) any {
 		if p.Date == nil || p.Date.Start == nil {
 			return nil
 		}
-		start := p.Date.Start.String()
+		start := formatNotionDate(p.Date.Start)
 		if p.Date.End != nil {
-			return fmt.Sprintf("%s/%s", start, p.Date.End.String())
+			return fmt.Sprintf("%s/%s", start, formatNotionDate(p.Date.End))
 		}
 		return start
 
@@ -432,7 +433,7 @@ func extractFormulaValue(formula notionapi.Formula) any {
 		return formula.Boolean
 	case notionapi.FormulaTypeDate:
 		if formula.Date != nil && formula.Date.Start != nil {
-			return formula.Date.Start.String()
+			return formatNotionDate(formula.Date.Start)
 		}
 	}
 	return nil
@@ -446,7 +447,7 @@ func extractRollupValue(rollup notionapi.Rollup) any {
 		return rollup.Number
 	case notionapi.RollupTypeDate:
 		if rollup.Date != nil && rollup.Date.Start != nil {
-			return rollup.Date.Start.String()
+			return formatNotionDate(rollup.Date.Start)
 		}
 	case notionapi.RollupTypeArray:
 		// For array rollups, recursively extract values
@@ -462,6 +463,22 @@ func extractRollupValue(rollup notionapi.Rollup) any {
 		}
 	}
 	return nil
+}
+
+// formatNotionDate formats a Notion Date for Obsidian frontmatter.
+// If the time is midnight (00:00:00), returns date-only format (YYYY-MM-DD).
+// Otherwise, returns full datetime format for Obsidian's datetime type.
+func formatNotionDate(d *notionapi.Date) string {
+	if d == nil {
+		return ""
+	}
+	t := time.Time(*d)
+	// Check if time is midnight (date-only in Notion)
+	if t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0 {
+		return t.Format("2006-01-02")
+	}
+	// Return full datetime in ISO 8601 format
+	return d.String()
 }
 
 // extractRichText extracts plain text from rich text array.
