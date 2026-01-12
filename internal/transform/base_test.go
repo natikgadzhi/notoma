@@ -246,12 +246,16 @@ func TestGenerateBaseFile(t *testing.T) {
 		t.Fatalf("GenerateBaseFile() error = %v", err)
 	}
 
-	// Check filters
+	// Check filters - should only have inFolder, not file.ext
 	if base.Filters == nil {
 		t.Fatal("filters is nil")
 	}
-	if len(base.Filters.And) != 2 {
-		t.Errorf("got %d filters, want 2", len(base.Filters.And))
+	if len(base.Filters.And) != 1 {
+		t.Errorf("got %d filters, want 1", len(base.Filters.And))
+	}
+	expectedFilter := `file.inFolder("Databases/Test Database")`
+	if base.Filters.And[0] != expectedFilter {
+		t.Errorf("got filter %q, want %q", base.Filters.And[0], expectedFilter)
 	}
 
 	// Check views
@@ -265,12 +269,23 @@ func TestGenerateBaseFile(t *testing.T) {
 		t.Errorf("got view name %q, want %q", base.Views[0].Name, "Table")
 	}
 
-	// Check columns - should have file.name + non-title properties
-	if len(base.Views[0].Columns) != 3 { // file.name, status, tags
-		t.Errorf("got %d columns, want 3", len(base.Views[0].Columns))
+	// Check column order - should have file.name + non-title properties
+	if len(base.Views[0].Order) != 3 { // file.name, status, tags
+		t.Errorf("got %d columns in order, want 3", len(base.Views[0].Order))
 	}
-	if base.Views[0].Columns[0].Property != "file.name" {
-		t.Errorf("first column should be file.name, got %q", base.Views[0].Columns[0].Property)
+	if base.Views[0].Order[0] != "file.name" {
+		t.Errorf("first column should be file.name, got %q", base.Views[0].Order[0])
+	}
+
+	// Check sort configuration
+	if len(base.Views[0].Sort) != 1 {
+		t.Errorf("got %d sort entries, want 1", len(base.Views[0].Sort))
+	}
+	if base.Views[0].Sort[0].Property != "file.name" {
+		t.Errorf("got sort property %q, want %q", base.Views[0].Sort[0].Property, "file.name")
+	}
+	if base.Views[0].Sort[0].Direction != "ASC" {
+		t.Errorf("got sort direction %q, want %q", base.Views[0].Sort[0].Direction, "ASC")
 	}
 
 	// Check display names
@@ -291,7 +306,6 @@ func TestMarshalBaseFile(t *testing.T) {
 		Filters: &FilterGroup{
 			And: []string{
 				`file.inFolder("Test")`,
-				`file.ext == "md"`,
 			},
 		},
 		Display: map[string]string{
@@ -299,11 +313,11 @@ func TestMarshalBaseFile(t *testing.T) {
 		},
 		Views: []View{
 			{
-				Type: "table",
-				Name: "Table",
-				Columns: []ViewColumn{
-					{Property: "file.name"},
-					{Property: "status"},
+				Type:  "table",
+				Name:  "Table",
+				Order: []string{"file.name", "status"},
+				Sort: []ViewSort{
+					{Property: "file.name", Direction: "ASC"},
 				},
 			},
 		},
@@ -321,11 +335,17 @@ func TestMarshalBaseFile(t *testing.T) {
 	}
 
 	// Verify content
-	if len(parsed.Filters.And) != 2 {
-		t.Errorf("got %d filters, want 2", len(parsed.Filters.And))
+	if len(parsed.Filters.And) != 1 {
+		t.Errorf("got %d filters, want 1", len(parsed.Filters.And))
 	}
 	if len(parsed.Views) != 1 {
 		t.Errorf("got %d views, want 1", len(parsed.Views))
+	}
+	if len(parsed.Views[0].Order) != 2 {
+		t.Errorf("got %d columns in order, want 2", len(parsed.Views[0].Order))
+	}
+	if len(parsed.Views[0].Sort) != 1 {
+		t.Errorf("got %d sort entries, want 1", len(parsed.Views[0].Sort))
 	}
 }
 
@@ -773,6 +793,301 @@ func TestMapPropertyName(t *testing.T) {
 				t.Errorf("mapPropertyName(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestBaseFileYAMLFormat(t *testing.T) {
+	// Test that the YAML output matches the expected Obsidian Bases format
+	base := &BaseFile{
+		Filters: &FilterGroup{
+			And: []string{
+				`type == "book"`,
+			},
+		},
+		Formulas: map[string]string{
+			"cover": "link(file.embeds[0])",
+		},
+		Views: []View{
+			{
+				Type:  "table",
+				Name:  "Table",
+				Order: []string{"file.name", "author", "rating", "tags"},
+				Sort: []ViewSort{
+					{Property: "rating", Direction: "DESC"},
+					{Property: "file.name", Direction: "ASC"},
+				},
+				ColumnSize: map[string]int{
+					"author": 224,
+					"rating": 92,
+				},
+			},
+		},
+	}
+
+	data, err := MarshalBaseFile(base)
+	if err != nil {
+		t.Fatalf("MarshalBaseFile() error = %v", err)
+	}
+
+	yamlStr := string(data)
+
+	// Verify key structural elements
+	if !contains(yamlStr, "filters:") {
+		t.Error("YAML should contain 'filters:'")
+	}
+	if !contains(yamlStr, "formulas:") {
+		t.Error("YAML should contain 'formulas:'")
+	}
+	if !contains(yamlStr, "views:") {
+		t.Error("YAML should contain 'views:'")
+	}
+	if !contains(yamlStr, "order:") {
+		t.Error("YAML should contain 'order:'")
+	}
+	if !contains(yamlStr, "sort:") {
+		t.Error("YAML should contain 'sort:'")
+	}
+	if !contains(yamlStr, "columnSize:") {
+		t.Error("YAML should contain 'columnSize:'")
+	}
+	if !contains(yamlStr, "direction:") {
+		t.Error("YAML should contain 'direction:'")
+	}
+	if !contains(yamlStr, "DESC") {
+		t.Error("YAML should contain 'DESC'")
+	}
+
+	// Verify roundtrip
+	var parsed BaseFile
+	if err := yaml.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("roundtrip unmarshal failed: %v", err)
+	}
+	if parsed.Formulas["cover"] != base.Formulas["cover"] {
+		t.Errorf("formula mismatch: got %q, want %q", parsed.Formulas["cover"], base.Formulas["cover"])
+	}
+	if parsed.Views[0].ColumnSize["author"] != 224 {
+		t.Errorf("columnSize mismatch: got %d, want 224", parsed.Views[0].ColumnSize["author"])
+	}
+}
+
+func TestBaseFileWithMultipleViews(t *testing.T) {
+	base := &BaseFile{
+		Filters: &FilterGroup{
+			And: []string{
+				`file.inFolder("Books")`,
+			},
+		},
+		Views: []View{
+			{
+				Type:  "table",
+				Name:  "Table",
+				Order: []string{"file.name", "author"},
+				Sort: []ViewSort{
+					{Property: "file.name", Direction: "ASC"},
+				},
+			},
+			{
+				Type:  "cards",
+				Name:  "Cards",
+				Order: []string{"file.name", "author", "rating"},
+				Sort: []ViewSort{
+					{Property: "rating", Direction: "DESC"},
+				},
+			},
+		},
+	}
+
+	data, err := MarshalBaseFile(base)
+	if err != nil {
+		t.Fatalf("MarshalBaseFile() error = %v", err)
+	}
+
+	var parsed BaseFile
+	if err := yaml.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("roundtrip unmarshal failed: %v", err)
+	}
+
+	if len(parsed.Views) != 2 {
+		t.Fatalf("got %d views, want 2", len(parsed.Views))
+	}
+	if parsed.Views[0].Type != "table" {
+		t.Errorf("first view type: got %q, want %q", parsed.Views[0].Type, "table")
+	}
+	if parsed.Views[1].Type != "cards" {
+		t.Errorf("second view type: got %q, want %q", parsed.Views[1].Type, "cards")
+	}
+}
+
+func TestBaseFileWithViewFilters(t *testing.T) {
+	base := &BaseFile{
+		Filters: &FilterGroup{
+			And: []string{
+				`file.inFolder("Tasks")`,
+			},
+		},
+		Views: []View{
+			{
+				Type:  "table",
+				Name:  "Active Tasks",
+				Order: []string{"file.name", "status"},
+				Filters: &FilterGroup{
+					And: []string{
+						`status != "done"`,
+					},
+				},
+			},
+			{
+				Type:  "table",
+				Name:  "Completed",
+				Order: []string{"file.name", "status"},
+				Filters: &FilterGroup{
+					And: []string{
+						`status == "done"`,
+					},
+				},
+			},
+		},
+	}
+
+	data, err := MarshalBaseFile(base)
+	if err != nil {
+		t.Fatalf("MarshalBaseFile() error = %v", err)
+	}
+
+	var parsed BaseFile
+	if err := yaml.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("roundtrip unmarshal failed: %v", err)
+	}
+
+	if parsed.Views[0].Filters == nil {
+		t.Fatal("first view filters should not be nil")
+	}
+	if len(parsed.Views[0].Filters.And) != 1 {
+		t.Errorf("first view should have 1 filter, got %d", len(parsed.Views[0].Filters.And))
+	}
+	if parsed.Views[1].Filters == nil {
+		t.Fatal("second view filters should not be nil")
+	}
+}
+
+func TestBaseFileWithOrFilters(t *testing.T) {
+	base := &BaseFile{
+		Filters: &FilterGroup{
+			Or: []string{
+				`file.inFolder("Books")`,
+				`file.inFolder("Articles")`,
+			},
+		},
+		Views: []View{
+			{
+				Type:  "table",
+				Name:  "Reading List",
+				Order: []string{"file.name"},
+			},
+		},
+	}
+
+	data, err := MarshalBaseFile(base)
+	if err != nil {
+		t.Fatalf("MarshalBaseFile() error = %v", err)
+	}
+
+	yamlStr := string(data)
+	if !contains(yamlStr, "or:") {
+		t.Error("YAML should contain 'or:'")
+	}
+
+	var parsed BaseFile
+	if err := yaml.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("roundtrip unmarshal failed: %v", err)
+	}
+
+	if len(parsed.Filters.Or) != 2 {
+		t.Errorf("got %d OR filters, want 2", len(parsed.Filters.Or))
+	}
+}
+
+func TestBuildColumnOrder(t *testing.T) {
+	schema := &DatabaseSchema{
+		Title: "Test",
+		Properties: map[string]PropertyMapping{
+			"Name":     {Name: "Name", Type: "text", IsTitle: true},
+			"Status":   {Name: "Status", Type: "text"},
+			"Priority": {Name: "Priority", Type: "number"},
+			"Due Date": {Name: "Due Date", Type: "date"},
+		},
+		TitleProperty: "Name",
+	}
+
+	order := buildColumnOrder(schema)
+
+	// First should always be file.name
+	if order[0] != "file.name" {
+		t.Errorf("first column should be file.name, got %q", order[0])
+	}
+
+	// Should have 4 columns: file.name + 3 non-title properties
+	if len(order) != 4 {
+		t.Errorf("got %d columns, want 4", len(order))
+	}
+
+	// Title property should not be included (it becomes file.name)
+	for _, col := range order {
+		if col == "name" {
+			t.Error("title property 'name' should not be in column order")
+		}
+	}
+
+	// Properties should be sanitized
+	found := false
+	for _, col := range order {
+		if col == "due_date" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("'Due Date' should be sanitized to 'due_date' in column order")
+	}
+}
+
+func TestGenerateBaseFile_EmptySchema(t *testing.T) {
+	schema := &DatabaseSchema{
+		Title:      "Empty DB",
+		Properties: map[string]PropertyMapping{},
+	}
+
+	base, err := GenerateBaseFile(schema, "Databases/Empty")
+	if err != nil {
+		t.Fatalf("GenerateBaseFile() error = %v", err)
+	}
+
+	// Should still have file.name column
+	if len(base.Views[0].Order) != 1 {
+		t.Errorf("got %d columns, want 1 (file.name)", len(base.Views[0].Order))
+	}
+	if base.Views[0].Order[0] != "file.name" {
+		t.Errorf("only column should be file.name, got %q", base.Views[0].Order[0])
+	}
+}
+
+func TestGenerateBaseFile_SpecialCharactersInPath(t *testing.T) {
+	schema := &DatabaseSchema{
+		Title: "Test",
+		Properties: map[string]PropertyMapping{
+			"Name": {Name: "Name", Type: "text", IsTitle: true},
+		},
+		TitleProperty: "Name",
+	}
+
+	base, err := GenerateBaseFile(schema, "My Notes/Sub Folder/Database")
+	if err != nil {
+		t.Fatalf("GenerateBaseFile() error = %v", err)
+	}
+
+	expectedFilter := `file.inFolder("My Notes/Sub Folder/Database")`
+	if base.Filters.And[0] != expectedFilter {
+		t.Errorf("got filter %q, want %q", base.Filters.And[0], expectedFilter)
 	}
 }
 
