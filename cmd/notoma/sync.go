@@ -116,6 +116,8 @@ func runSync(cmd *cobra.Command, args []string) error {
 	// Create worker pool for parallel fetching (5 concurrent workers)
 	workerPool := notion.DefaultWorkerPool(client)
 
+	// Note: OnStart callback will be set after TUI runner is created
+
 	// Validate connection by fetching current user
 	user, err := client.GetCurrentUser(ctx)
 	if err != nil {
@@ -140,6 +142,11 @@ func runSync(cmd *cobra.Command, args []string) error {
 		if err := tuiRunner.Start(); err != nil {
 			return fmt.Errorf("starting TUI: %w", err)
 		}
+
+		// Set up worker pool callback to mark items as syncing when work actually starts
+		workerPool.SetOnStart(func(pageID string) {
+			tuiRunner.SetSyncing(pageID)
+		})
 	}
 
 	// Build list of roots to process
@@ -256,14 +263,13 @@ func processRoot(sc *syncContext, root config.Root) error {
 		"id", resource.ID,
 	)
 
-	// Add to TUI if available
+	// Add to TUI if available (starts as pending, worker pool OnStart marks as syncing)
 	if sc.tuiRunner != nil {
 		itemType := tui.TypePage
 		if resource.Type == notion.ResourceTypeDatabase {
 			itemType = tui.TypeDatabase
 		}
 		sc.tuiRunner.AddRoot(resource.ID, resource.Title, resource.Icon, itemType)
-		sc.tuiRunner.SetSyncing(resource.ID)
 	}
 
 	var syncErr error
@@ -303,6 +309,11 @@ func syncPageRecursive(sc *syncContext, resource *notion.Resource, folderPath st
 		return nil
 	}
 	visited[resource.ID] = true
+
+	// Mark as syncing for root-level pages (not going through worker pool)
+	if sc.tuiRunner != nil {
+		sc.tuiRunner.SetSyncing(resource.ID)
+	}
 
 	// Fetch page metadata to get LastEditedTime
 	page, err := sc.client.GetPage(sc.ctx, resource.ID)
@@ -386,11 +397,10 @@ func syncPageRecursive(sc *syncContext, resource *notion.Resource, folderPath st
 			childMap[child.id] = child
 			childIDs = append(childIDs, child.id)
 
-			// Add child to TUI if available
+			// Add child to TUI if available (starts as pending, worker pool OnStart marks as syncing)
 			// Note: child pages from blocks don't have icon data, pass empty for default
 			if sc.tuiRunner != nil {
 				sc.tuiRunner.AddChild(resource.ID, child.id, child.title, "", tui.TypePage)
-				sc.tuiRunner.SetSyncing(child.id)
 			}
 		}
 
@@ -515,10 +525,9 @@ func processChildPageWithBlocks(sc *syncContext, resource *notion.Resource, bloc
 			childMap[child.id] = child
 			childIDs = append(childIDs, child.id)
 
-			// Add to TUI
+			// Add to TUI (starts as pending, worker pool OnStart marks as syncing)
 			if sc.tuiRunner != nil {
 				sc.tuiRunner.AddChild(resource.ID, child.id, child.title, "", tui.TypePage)
-				sc.tuiRunner.SetSyncing(child.id)
 			}
 		}
 
@@ -584,6 +593,11 @@ func extractChildPages(blocks []notionapi.Block) []childPageInfo {
 
 // syncDatabase syncs a database and all its entries to the vault.
 func syncDatabase(sc *syncContext, resource *notion.Resource, folderName string) error {
+	// Mark root database as syncing
+	if sc.tuiRunner != nil {
+		sc.tuiRunner.SetSyncing(resource.ID)
+	}
+
 	// Fetch database schema
 	db, err := sc.client.GetDatabase(sc.ctx, resource.ID)
 	if err != nil {
@@ -693,10 +707,7 @@ func syncDatabase(sc *syncContext, resource *notion.Resource, folderName string)
 		}
 
 		pagesToSync = append(pagesToSync, pageID)
-		// Update TUI to show syncing
-		if sc.tuiRunner != nil {
-			sc.tuiRunner.SetSyncing(pageID)
-		}
+		// Note: Item stays as pending until worker pool OnStart callback marks it as syncing
 	}
 
 	sc.logger.Info("fetching blocks in parallel",

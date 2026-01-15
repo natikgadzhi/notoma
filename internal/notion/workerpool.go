@@ -7,6 +7,10 @@ import (
 	"github.com/jomei/notionapi"
 )
 
+// OnStartFunc is called when a worker starts processing an item.
+// The pageID parameter identifies which item is now being processed.
+type OnStartFunc func(pageID string)
+
 // WorkerPool manages a pool of workers for parallel API fetching.
 // It uses a semaphore pattern to limit concurrency while sharing
 // a rate-limited client across all workers.
@@ -14,6 +18,13 @@ type WorkerPool struct {
 	client      *Client
 	concurrency int
 	semaphore   chan struct{}
+	onStart     OnStartFunc
+}
+
+// SetOnStart sets a callback that fires when a worker begins processing an item.
+// This is called after the semaphore is acquired, just before the API call.
+func (p *WorkerPool) SetOnStart(fn OnStartFunc) {
+	p.onStart = fn
 }
 
 // NewWorkerPool creates a worker pool with the specified concurrency limit.
@@ -74,6 +85,11 @@ func (p *WorkerPool) FetchBlocksParallel(ctx context.Context, pageIDs []string) 
 				defer wg.Done()
 				defer func() { <-p.semaphore }() // Release semaphore slot
 
+				// Notify that work is starting for this item
+				if p.onStart != nil {
+					p.onStart(id)
+				}
+
 				blocks, err := p.client.GetBlockChildren(ctx, id)
 				select {
 				case results <- BlockFetchResult{PageID: id, Blocks: blocks, Err: err}:
@@ -123,6 +139,11 @@ func (p *WorkerPool) FetchPagesParallel(ctx context.Context, pageIDs []string) <
 			go func(id string) {
 				defer wg.Done()
 				defer func() { <-p.semaphore }() // Release semaphore slot
+
+				// Notify that work is starting for this item
+				if p.onStart != nil {
+					p.onStart(id)
+				}
 
 				page, err := p.client.GetPage(ctx, id)
 				select {
@@ -174,6 +195,11 @@ func (p *WorkerPool) FetchPagesWithBlocksParallel(ctx context.Context, pageIDs [
 			go func(id string) {
 				defer wg.Done()
 				defer func() { <-p.semaphore }() // Release semaphore slot
+
+				// Notify that work is starting for this item
+				if p.onStart != nil {
+					p.onStart(id)
+				}
 
 				result := PageWithBlocksResult{PageID: id}
 
