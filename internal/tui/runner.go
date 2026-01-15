@@ -48,14 +48,14 @@ func (r *Runner) Wait() {
 	}
 }
 
-// AddItem adds a new item to the tree.
-func (r *Runner) AddItem(item *SyncItem, parentID string) {
+// AddItem adds a new item to the display.
+func (r *Runner) AddItem(item *SyncItem) {
 	if r.program != nil {
-		r.program.Send(AddItemMsg{Item: item, ParentID: parentID})
+		r.program.Send(AddItemMsg{Item: item})
 	}
 }
 
-// AddRoot adds a root-level item (no parent).
+// AddRoot adds a root-level item (convenience method).
 func (r *Runner) AddRoot(id, title, icon string, itemType ItemType) {
 	r.AddItem(&SyncItem{
 		ID:     id,
@@ -63,10 +63,11 @@ func (r *Runner) AddRoot(id, title, icon string, itemType ItemType) {
 		Icon:   icon,
 		Type:   itemType,
 		Status: StatusPending,
-	}, "")
+	})
 }
 
-// AddChild adds a child item under a parent.
+// AddChild adds a child item (same as AddRoot in the new windowed view).
+// The parentID is kept for API compatibility but not used for display.
 func (r *Runner) AddChild(parentID, id, title, icon string, itemType ItemType) {
 	r.AddItem(&SyncItem{
 		ID:     id,
@@ -74,7 +75,7 @@ func (r *Runner) AddChild(parentID, id, title, icon string, itemType ItemType) {
 		Icon:   icon,
 		Type:   itemType,
 		Status: StatusPending,
-	}, parentID)
+	})
 }
 
 // SetSyncing marks an item as currently syncing.
