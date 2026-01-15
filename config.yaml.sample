@@ -40,3 +40,27 @@ options:
   # Download images and files from Notion (defaults to true)
   # Set to false to keep original Notion URLs instead of downloading
   # download_attachments: true
+
+  # Date formatting options
+  # dates:
+  #   # Convert midnight datetimes (2026-01-02T00:00:00Z) to date-only format
+  #   # Defaults to true
+  #   # transform_empty_datetime_to_date: true
+  #
+  #   # Date format string (Go time format)
+  #   # Defaults to "02-01-2006" (DD-MM-YYYY)
+  #   # Common formats:
+  #   #   - "02-01-2006" = DD-MM-YYYY (default)
+  #   #   - "2006-01-02" = YYYY-MM-DD (ISO)
+  #   #   - "01/02/2006" = MM/DD/YYYY (US)
+  #   #   - "02/01/2006" = DD/MM/YYYY (EU)
+  #   # date_format: "02-01-2006"
+  #
+  #   # Wrap dates in Obsidian markdown links to daily notes
+  #   # When true: dates become [15-01-2026](Days/15-01-2026.md)
+  #   # Defaults to false
+  #   # link_daily_notes: false
+  #
+  #   # Folder prefix for daily note links (only used when link_daily_notes is true)
+  #   # Example: "Days/" results in links like [15-01-2026](Days/15-01-2026.md)
+  #   # daily_note_path_prefix: "Days/"
