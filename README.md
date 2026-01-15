@@ -1,6 +1,6 @@
 # notoma
 
-One-way sync tool from Notion to Obsidian. Notion is the source of truth.
+One-way sync tool from Notion to Obsidian via Notion API. Notoma is designed for regular ongoing incremental updates. If you need a one-time update, Obsidian-native Notion importer will work faster.
 
 ## Features
 
@@ -9,12 +9,10 @@ One-way sync tool from Notion to Obsidian. Notion is the source of truth.
 - Database → Obsidian Bases (`.base` files) conversion
 - Attachment handling with automatic download
 - Rate limiting to respect Notion API limits
-- Runs as CLI or Docker container
 
 ## Prerequisites
 
 - Go 1.24+ (for local development)
-- Docker (optional, for containerized builds)
 - A Notion integration token ([create one here](https://www.notion.so/my-integrations))
 
 ## Building Locally
@@ -92,12 +90,6 @@ options:
   download_attachments: true
 ```
 
-### 3. Share pages with your integration
-
-In Notion, share each page/database with your integration:
-1. Open the page in Notion
-2. Click "Share" → "Invite"
-3. Select your integration
 
 ## Usage
 
@@ -140,19 +132,6 @@ go fmt ./...
 # Run linter (requires golangci-lint)
 golangci-lint run
 ```
-
-## Project Status
-
-This project is under active development. Current status:
-
-- [x] Phase 1: Project scaffolding, CLI, config, Notion API connection
-- [x] Phase 2: Block → Markdown transformation
-- [x] Phase 3: Database → Obsidian Bases conversion
-- [ ] Phase 4: Attachment handling
-- [ ] Phase 5: Incremental sync
-- [ ] Phase 6: CI/CD, Docker, k8s manifests
-- [ ] Phase 7: `status` command
-- [ ] Phase 8: `validate` command
 
 ## License
 
