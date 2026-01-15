@@ -2,6 +2,8 @@
 package sync
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -65,6 +67,7 @@ type AttachmentState struct {
 type SyncState struct {
 	Version      int                         `json:"version"`
 	LastSyncTime time.Time                   `json:"last_sync_time"`
+	ConfigHash   string                      `json:"config_hash,omitempty"`
 	Resources    map[string]ResourceState    `json:"resources"`
 	Attachments  map[string]*AttachmentState `json:"attachments,omitempty"`
 }
@@ -350,4 +353,45 @@ func (s *SyncState) AllLocalPaths() []string {
 		}
 	}
 	return paths
+}
+
+// ConfigSettings holds config values that affect sync behavior.
+// When these change, the state should be invalidated.
+type ConfigSettings struct {
+	DownloadAttachments bool
+	AttachmentFolder    string
+}
+
+// ComputeConfigHash computes a hash of config settings that affect sync.
+// When this hash changes, pages need to be re-synced.
+func ComputeConfigHash(settings ConfigSettings) string {
+	// Create a deterministic string representation
+	data := fmt.Sprintf("download_attachments=%v;attachment_folder=%s",
+		settings.DownloadAttachments, settings.AttachmentFolder)
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:8]) // Use first 8 bytes for brevity
+}
+
+// CheckConfigChanged checks if the config has changed since last sync.
+// Returns true if config changed and state should be invalidated.
+func (s *SyncState) CheckConfigChanged(currentHash string) bool {
+	if s.ConfigHash == "" {
+		// No previous hash, this is first sync or old state file
+		return false
+	}
+	return s.ConfigHash != currentHash
+}
+
+// InvalidateForConfigChange clears all resource state when config changes.
+// This forces a full resync with the new config settings.
+func (s *SyncState) InvalidateForConfigChange(newHash string) {
+	s.Resources = make(map[string]ResourceState)
+	s.Attachments = make(map[string]*AttachmentState)
+	s.ConfigHash = newHash
+}
+
+// UpdateConfigHash sets the config hash without invalidating state.
+// Use this when config hasn't changed or after invalidation.
+func (s *SyncState) UpdateConfigHash(hash string) {
+	s.ConfigHash = hash
 }

@@ -57,7 +57,7 @@ options:
 		t.Errorf("expected state file '/data/state.json', got %q", cfg.State.File)
 	}
 
-	if !cfg.Options.DownloadAttachments {
+	if !cfg.Options.ShouldDownloadAttachments() {
 		t.Error("expected download_attachments to be true")
 	}
 
@@ -218,6 +218,76 @@ func TestLoad_FileNotFound(t *testing.T) {
 	_, err := Load("/nonexistent/config.yaml")
 	if err == nil {
 		t.Error("expected error for nonexistent file")
+	}
+}
+
+func TestOptions_ShouldDownloadAttachments_DefaultsToTrue(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	// Config without download_attachments specified
+	configContent := `
+sync:
+  roots:
+    - url: "https://www.notion.so/workspace/abc123def456abc123def456abc123de"
+output:
+  vault_path: "/data/vault"
+  attachment_folder: "_attachments"
+state:
+  file: "/data/state.json"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token")
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Should default to true when not specified
+	if !cfg.Options.ShouldDownloadAttachments() {
+		t.Error("expected ShouldDownloadAttachments() to default to true when not specified")
+	}
+
+	// The underlying pointer should be nil
+	if cfg.Options.DownloadAttachments != nil {
+		t.Error("expected DownloadAttachments to be nil when not specified")
+	}
+}
+
+func TestOptions_ShouldDownloadAttachments_ExplicitFalse(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	// Config with download_attachments explicitly set to false
+	configContent := `
+sync:
+  roots:
+    - url: "https://www.notion.so/workspace/abc123def456abc123def456abc123de"
+output:
+  vault_path: "/data/vault"
+state:
+  file: "/data/state.json"
+options:
+  download_attachments: false
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token")
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Should be false when explicitly set to false
+	if cfg.Options.ShouldDownloadAttachments() {
+		t.Error("expected ShouldDownloadAttachments() to be false when explicitly set to false")
 	}
 }
 

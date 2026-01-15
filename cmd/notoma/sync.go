@@ -89,16 +89,33 @@ func runSync(cmd *cobra.Command, args []string) error {
 		logger.Info("dry-run mode enabled, no files will be written")
 	}
 
+	// Compute config hash for change detection
+	configHash := sync.ComputeConfigHash(sync.ConfigSettings{
+		DownloadAttachments: cfg.Options.ShouldDownloadAttachments(),
+		AttachmentFolder:    cfg.Output.AttachmentFolder,
+	})
+
 	// Load sync state (or create new if --force or doesn't exist)
 	var state *sync.SyncState
 	if force {
 		logger.Info("force mode enabled, ignoring state and performing full resync")
 		state = sync.NewSyncState()
+		state.UpdateConfigHash(configHash)
 	} else {
 		state, err = sync.LoadState(cfg.State.File)
 		if err != nil {
 			return fmt.Errorf("loading state: %w", err)
 		}
+
+		// Check if config changed since last sync
+		if state.CheckConfigChanged(configHash) {
+			logger.Info("config changed since last sync, invalidating state for full resync")
+			state.InvalidateForConfigChange(configHash)
+		} else {
+			// Update hash for new state files or unchanged config
+			state.UpdateConfigHash(configHash)
+		}
+
 		if state.ResourceCount() > 0 {
 			logger.Info("loaded sync state",
 				"resources", state.ResourceCount(),
@@ -126,9 +143,9 @@ func runSync(cmd *cobra.Command, args []string) error {
 	// Create writer
 	w := writer.New(cfg.Output.VaultPath, cfg.Output.AttachmentFolder, dryRun, logger)
 
-	// Create attachment downloader if enabled
+	// Create attachment downloader if enabled (defaults to true)
 	var attDownloader *transform.AttachmentDownloader
-	if cfg.Options.DownloadAttachments {
+	if cfg.Options.ShouldDownloadAttachments() {
 		attDownloader = transform.NewAttachmentDownloader(cfg.Output.AttachmentFolder, dryRun, logger)
 		logger.Info("attachment downloading enabled", "folder", cfg.Output.AttachmentFolder)
 	}

@@ -37,5 +37,6 @@ state:
   file: "/path/to/notoma-state.json"
 
 options:
-  # Download images and files from Notion
-  download_attachments: true
+  # Download images and files from Notion (defaults to true)
+  # Set to false to keep original Notion URLs instead of downloading
+  # download_attachments: true

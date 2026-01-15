@@ -29,7 +29,18 @@ type StateConfig struct {
 
 // Options contains optional sync behavior settings.
 type Options struct {
-	DownloadAttachments bool `yaml:"download_attachments"`
+	// DownloadAttachments controls whether to download Notion-hosted attachments.
+	// Defaults to true if not specified.
+	DownloadAttachments *bool `yaml:"download_attachments"`
+}
+
+// ShouldDownloadAttachments returns whether attachments should be downloaded.
+// Defaults to true if not explicitly set.
+func (o *Options) ShouldDownloadAttachments() bool {
+	if o.DownloadAttachments == nil {
+		return true
+	}
+	return *o.DownloadAttachments
 }
 
 // SyncConfig contains the list of roots to sync.

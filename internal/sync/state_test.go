@@ -727,3 +727,134 @@ func TestAllLocalPaths_Empty(t *testing.T) {
 		t.Errorf("expected nil for nil state, got %v", paths)
 	}
 }
+
+func TestComputeConfigHash(t *testing.T) {
+	settings1 := ConfigSettings{
+		DownloadAttachments: true,
+		AttachmentFolder:    "_attachments",
+	}
+	settings2 := ConfigSettings{
+		DownloadAttachments: false,
+		AttachmentFolder:    "_attachments",
+	}
+	settings3 := ConfigSettings{
+		DownloadAttachments: true,
+		AttachmentFolder:    "assets",
+	}
+
+	hash1 := ComputeConfigHash(settings1)
+	hash2 := ComputeConfigHash(settings2)
+	hash3 := ComputeConfigHash(settings3)
+
+	// Same settings should produce same hash
+	hash1Again := ComputeConfigHash(settings1)
+	if hash1 != hash1Again {
+		t.Errorf("same settings produced different hashes: %s vs %s", hash1, hash1Again)
+	}
+
+	// Different settings should produce different hashes
+	if hash1 == hash2 {
+		t.Error("different download_attachments should produce different hashes")
+	}
+	if hash1 == hash3 {
+		t.Error("different attachment_folder should produce different hashes")
+	}
+	if hash2 == hash3 {
+		t.Error("completely different settings should produce different hashes")
+	}
+
+	// Hash should be non-empty and reasonable length
+	if len(hash1) == 0 {
+		t.Error("hash should not be empty")
+	}
+	if len(hash1) > 32 {
+		t.Errorf("hash unexpectedly long: %d chars", len(hash1))
+	}
+}
+
+func TestCheckConfigChanged(t *testing.T) {
+	state := NewSyncState()
+
+	// No previous hash - should not trigger change
+	if state.CheckConfigChanged("newhash") {
+		t.Error("empty config hash should not trigger change")
+	}
+
+	// Set a hash
+	state.ConfigHash = "oldhash"
+
+	// Same hash - no change
+	if state.CheckConfigChanged("oldhash") {
+		t.Error("same hash should not trigger change")
+	}
+
+	// Different hash - should trigger change
+	if !state.CheckConfigChanged("newhash") {
+		t.Error("different hash should trigger change")
+	}
+}
+
+func TestInvalidateForConfigChange(t *testing.T) {
+	state := NewSyncState()
+	state.ConfigHash = "oldhash"
+	state.Resources["page-1"] = ResourceState{ID: "page-1", Title: "Test Page"}
+	state.Attachments["url1"] = &AttachmentState{OriginalURL: "url1"}
+
+	state.InvalidateForConfigChange("newhash")
+
+	// Hash should be updated
+	if state.ConfigHash != "newhash" {
+		t.Errorf("expected hash 'newhash', got %q", state.ConfigHash)
+	}
+
+	// Resources should be cleared
+	if len(state.Resources) != 0 {
+		t.Errorf("expected 0 resources, got %d", len(state.Resources))
+	}
+
+	// Attachments should be cleared
+	if len(state.Attachments) != 0 {
+		t.Errorf("expected 0 attachments, got %d", len(state.Attachments))
+	}
+}
+
+func TestUpdateConfigHash(t *testing.T) {
+	state := NewSyncState()
+	state.Resources["page-1"] = ResourceState{ID: "page-1", Title: "Test Page"}
+
+	state.UpdateConfigHash("myhash")
+
+	// Hash should be updated
+	if state.ConfigHash != "myhash" {
+		t.Errorf("expected hash 'myhash', got %q", state.ConfigHash)
+	}
+
+	// Resources should NOT be cleared
+	if len(state.Resources) != 1 {
+		t.Errorf("expected 1 resource, got %d", len(state.Resources))
+	}
+}
+
+func TestConfigHashPersistence(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "state.json")
+
+	// Create state with config hash
+	state := NewSyncState()
+	state.ConfigHash = "testhash123"
+	state.Resources["page-1"] = ResourceState{ID: "page-1", Title: "Test"}
+
+	if err := SaveState(path, state); err != nil {
+		t.Fatalf("failed to save state: %v", err)
+	}
+
+	// Load and verify hash is preserved
+	loaded, err := LoadState(path)
+	if err != nil {
+		t.Fatalf("failed to load state: %v", err)
+	}
+
+	if loaded.ConfigHash != "testhash123" {
+		t.Errorf("expected config hash 'testhash123', got %q", loaded.ConfigHash)
+	}
+}
