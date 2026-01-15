@@ -7,21 +7,31 @@ import (
 )
 
 // RichTextToMarkdown converts Notion rich text array to markdown string.
+// Uses default date formatting.
 func RichTextToMarkdown(richText []notionapi.RichText) string {
+	return RichTextToMarkdownWithFormatter(richText, nil)
+}
+
+// RichTextToMarkdownWithFormatter converts Notion rich text array to markdown string
+// with custom date formatting. If df is nil, DefaultDateFormatter() is used.
+func RichTextToMarkdownWithFormatter(richText []notionapi.RichText, df *DateFormatter) string {
+	if df == nil {
+		df = DefaultDateFormatter()
+	}
 	var sb strings.Builder
 	for _, rt := range richText {
-		sb.WriteString(richTextSegmentToMarkdown(rt))
+		sb.WriteString(richTextSegmentToMarkdown(rt, df))
 	}
 	return sb.String()
 }
 
 // richTextSegmentToMarkdown converts a single rich text segment to markdown.
-func richTextSegmentToMarkdown(rt notionapi.RichText) string {
+func richTextSegmentToMarkdown(rt notionapi.RichText, df *DateFormatter) string {
 	text := rt.PlainText
 
 	// Handle mentions (check if Mention field is populated)
 	if rt.Mention != nil {
-		text = convertMention(rt.Mention)
+		text = convertMention(rt.Mention, df)
 	}
 
 	// Handle equations (check if Equation field is populated)
@@ -56,7 +66,7 @@ func richTextSegmentToMarkdown(rt notionapi.RichText) string {
 }
 
 // convertMention converts a Notion mention to markdown.
-func convertMention(mention *notionapi.Mention) string {
+func convertMention(mention *notionapi.Mention, df *DateFormatter) string {
 	if mention == nil {
 		return ""
 	}
@@ -77,7 +87,7 @@ func convertMention(mention *notionapi.Mention) string {
 		}
 	case notionapi.MentionTypeDate:
 		if mention.Date != nil {
-			return formatMentionDate(mention.Date)
+			return df.FormatDateObject(mention.Date)
 		}
 	case notionapi.MentionTypeTemplateMention:
 		if mention.TemplateMention != nil {
@@ -85,19 +95,6 @@ func convertMention(mention *notionapi.Mention) string {
 		}
 	}
 	return ""
-}
-
-// formatMentionDate formats a date mention to ISO string.
-func formatMentionDate(date *notionapi.DateObject) string {
-	if date == nil || date.Start == nil {
-		return ""
-	}
-
-	start := date.Start.String()
-	if date.End != nil {
-		return start + " → " + date.End.String()
-	}
-	return start
 }
 
 // applyAnnotations applies rich text annotations to text.

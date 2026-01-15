@@ -36,6 +36,7 @@ type syncContext struct {
 	state         *sync.SyncState
 	tuiRunner     *tui.Runner
 	attDownloader *transform.AttachmentDownloader
+	dateFormatter *transform.DateFormatter
 	dryRun        bool
 }
 
@@ -182,6 +183,9 @@ func runSync(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Create date formatter from config
+	dateFormatter := transform.NewDateFormatter(cfg.Options.GetDatesConfig())
+
 	// Create sync context to pass to sync functions
 	sc := &syncContext{
 		ctx:           ctx,
@@ -192,6 +196,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 		state:         state,
 		tuiRunner:     tuiRunner,
 		attDownloader: attDownloader,
+		dateFormatter: dateFormatter,
 		dryRun:        dryRun,
 	}
 
@@ -353,13 +358,8 @@ func syncPageRecursive(sc *syncContext, resource *notion.Resource, folderPath st
 	if sc.dryRun {
 		sc.logger.Info("would sync page", "title", resource.Title, "blocks", len(blocks), "path", localPath)
 	} else {
-		// Transform blocks to markdown (with attachment downloading if enabled)
-		var transformer *transform.Transformer
-		if sc.attDownloader != nil {
-			transformer = transform.NewTransformerWithAttachments(sc.ctx, sc.client, sc.attDownloader)
-		} else {
-			transformer = transform.NewTransformer(sc.ctx, sc.client)
-		}
+		// Transform blocks to markdown (with attachment downloading and date formatting)
+		transformer := transform.NewTransformerWithOptions(sc.ctx, sc.client, sc.attDownloader, sc.dateFormatter)
 
 		markdown, err := transformer.BlocksToMarkdown(blocks)
 		if err != nil {
@@ -483,13 +483,8 @@ func processChildPageWithBlocks(sc *syncContext, resource *notion.Resource, bloc
 	if sc.dryRun {
 		sc.logger.Info("would sync child page", "title", resource.Title, "blocks", len(blocks), "path", localPath)
 	} else {
-		// Transform blocks to markdown (with attachment downloading if enabled)
-		var transformer *transform.Transformer
-		if sc.attDownloader != nil {
-			transformer = transform.NewTransformerWithAttachments(sc.ctx, sc.client, sc.attDownloader)
-		} else {
-			transformer = transform.NewTransformer(sc.ctx, sc.client)
-		}
+		// Transform blocks to markdown (with attachment downloading and date formatting)
+		transformer := transform.NewTransformerWithOptions(sc.ctx, sc.client, sc.attDownloader, sc.dateFormatter)
 
 		markdown, err := transformer.BlocksToMarkdown(blocks)
 		if err != nil {
@@ -680,13 +675,8 @@ func syncDatabase(sc *syncContext, resource *notion.Resource, folderName string)
 		return fmt.Errorf("creating folder: %w", err)
 	}
 
-	// Create transformer (with attachment downloading if enabled)
-	var transformer *transform.Transformer
-	if sc.attDownloader != nil {
-		transformer = transform.NewTransformerWithAttachments(sc.ctx, sc.client, sc.attDownloader)
-	} else {
-		transformer = transform.NewTransformer(sc.ctx, sc.client)
-	}
+	// Create transformer (with attachment downloading and date formatting)
+	transformer := transform.NewTransformerWithOptions(sc.ctx, sc.client, sc.attDownloader, sc.dateFormatter)
 
 	// Filter pages that need syncing and build lookup map
 	var pagesToSync []string
@@ -785,8 +775,8 @@ func syncDatabase(sc *syncContext, resource *notion.Resource, folderName string)
 // syncDatabaseEntryWithBlocks syncs a single database entry using pre-fetched blocks.
 // Returns the filename written and any error.
 func syncDatabaseEntryWithBlocks(sc *syncContext, transformer *transform.Transformer, page *notionapi.Page, blocks []notionapi.Block, schema *transform.DatabaseSchema, folder string) (string, error) {
-	// Extract entry data for frontmatter
-	entry, err := transform.ExtractEntryData(page, schema)
+	// Extract entry data for frontmatter using the transformer's date formatter
+	entry, err := transform.ExtractEntryData(page, schema, transformer.GetDateFormatter())
 	if err != nil {
 		return "", fmt.Errorf("extracting entry data: %w", err)
 	}

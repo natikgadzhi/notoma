@@ -375,7 +375,7 @@ func TestExtractEntryData(t *testing.T) {
 		},
 	}
 
-	entry, err := ExtractEntryData(page, schema)
+	entry, err := ExtractEntryData(page, schema, nil)
 	if err != nil {
 		t.Fatalf("ExtractEntryData() error = %v", err)
 	}
@@ -425,7 +425,7 @@ func TestExtractEntryData_DateFields(t *testing.T) {
 		},
 	}
 
-	entry, err := ExtractEntryData(page, schema)
+	entry, err := ExtractEntryData(page, schema, nil)
 	if err != nil {
 		t.Fatalf("ExtractEntryData() error = %v", err)
 	}
@@ -455,7 +455,7 @@ func TestExtractPropertyValue_Relation(t *testing.T) {
 		},
 	}
 
-	value := extractPropertyValue(prop)
+	value := extractPropertyValue(prop, DefaultDateFormatter())
 	links, ok := value.([]string)
 	if !ok {
 		t.Fatalf("expected []string, got %T", value)
@@ -481,7 +481,7 @@ func TestExtractPropertyValue_MultiSelect(t *testing.T) {
 		},
 	}
 
-	value := extractPropertyValue(prop)
+	value := extractPropertyValue(prop, DefaultDateFormatter())
 	tags, ok := value.([]string)
 	if !ok {
 		t.Fatalf("expected []string, got %T", value)
@@ -499,12 +499,14 @@ func TestExtractPropertyValue_MultiSelect(t *testing.T) {
 }
 
 func TestExtractPropertyValue_Date(t *testing.T) {
-	// Date-only (midnight) - should return YYYY-MM-DD format
+	// Date-only (midnight) - should return DD-MM-YYYY format by default
 	startDate := notionapi.Date(time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC))
 	endDate := notionapi.Date(time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC))
 	// DateTime (non-midnight) - should return full ISO format
 	startDateTime := notionapi.Date(time.Date(2024, 1, 15, 14, 30, 0, 0, time.UTC))
 	endDateTime := notionapi.Date(time.Date(2024, 1, 20, 18, 45, 0, 0, time.UTC))
+
+	df := DefaultDateFormatter()
 
 	tests := []struct {
 		name string
@@ -518,7 +520,7 @@ func TestExtractPropertyValue_Date(t *testing.T) {
 					Start: &startDate,
 				},
 			},
-			want: "2024-01-15", // Date-only format for Obsidian date type
+			want: "15-01-2024", // DD-MM-YYYY format by default
 		},
 		{
 			name: "date range (midnight)",
@@ -528,7 +530,7 @@ func TestExtractPropertyValue_Date(t *testing.T) {
 					End:   &endDate,
 				},
 			},
-			want: "2024-01-15/2024-01-20", // Date-only format for both
+			want: "15-01-2024/20-01-2024", // DD-MM-YYYY format for both
 		},
 		{
 			name: "datetime (non-midnight)",
@@ -560,7 +562,7 @@ func TestExtractPropertyValue_Date(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			value := extractPropertyValue(tt.prop)
+			value := extractPropertyValue(tt.prop, df)
 			if tt.want == "" {
 				if value != nil {
 					t.Errorf("got %v, want nil", value)
@@ -618,7 +620,7 @@ func TestExtractPropertyValue_Formula(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			value := extractPropertyValue(tt.prop)
+			value := extractPropertyValue(tt.prop, DefaultDateFormatter())
 			if value != tt.want {
 				t.Errorf("got %v, want %v", value, tt.want)
 			}
@@ -634,7 +636,7 @@ func TestExtractPropertyValue_People(t *testing.T) {
 		},
 	}
 
-	value := extractPropertyValue(prop)
+	value := extractPropertyValue(prop, DefaultDateFormatter())
 	names, ok := value.([]string)
 	if !ok {
 		t.Fatalf("expected []string, got %T", value)
@@ -651,11 +653,12 @@ func TestExtractPropertyValue_People(t *testing.T) {
 func TestExtractPropertyValue_Checkbox(t *testing.T) {
 	trueVal := &notionapi.CheckboxProperty{Checkbox: true}
 	falseVal := &notionapi.CheckboxProperty{Checkbox: false}
+	df := DefaultDateFormatter()
 
-	if v := extractPropertyValue(trueVal); v != true {
+	if v := extractPropertyValue(trueVal, df); v != true {
 		t.Errorf("got %v, want true", v)
 	}
-	if v := extractPropertyValue(falseVal); v != false {
+	if v := extractPropertyValue(falseVal, df); v != false {
 		t.Errorf("got %v, want false", v)
 	}
 }
@@ -792,7 +795,7 @@ func TestExtractEntryData_WithIcon(t *testing.T) {
 		},
 	}
 
-	entry, err := ExtractEntryData(page, schema)
+	entry, err := ExtractEntryData(page, schema, nil)
 	if err != nil {
 		t.Fatalf("ExtractEntryData() error = %v", err)
 	}
@@ -821,7 +824,7 @@ func TestExtractEntryData_NoIcon(t *testing.T) {
 		},
 	}
 
-	entry, err := ExtractEntryData(page, schema)
+	entry, err := ExtractEntryData(page, schema, nil)
 	if err != nil {
 		t.Fatalf("ExtractEntryData() error = %v", err)
 	}
