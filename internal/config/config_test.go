@@ -291,6 +291,131 @@ options:
 	}
 }
 
+func TestDatesConfig_Defaults(t *testing.T) {
+	// Test nil DatesConfig uses defaults
+	var cfg *DatesConfig = nil
+
+	if !cfg.ShouldTransformEmptyDatetimeToDate() {
+		t.Error("expected ShouldTransformEmptyDatetimeToDate to default to true")
+	}
+	if cfg.ShouldLinkDailyNotes() {
+		t.Error("expected ShouldLinkDailyNotes to default to false")
+	}
+	if cfg.GetDailyNotePathPrefix() != "" {
+		t.Errorf("expected GetDailyNotePathPrefix to default to empty, got %q", cfg.GetDailyNotePathPrefix())
+	}
+	if cfg.GetDateFormat() != "02-01-2006" {
+		t.Errorf("expected GetDateFormat to default to '02-01-2006', got %q", cfg.GetDateFormat())
+	}
+}
+
+func TestDatesConfig_CustomValues(t *testing.T) {
+	trueVal := true
+	falseVal := false
+
+	cfg := &DatesConfig{
+		TransformEmptyDatetimeToDate: &falseVal,
+		LinkDailyNotes:               &trueVal,
+		DailyNotePathPrefix:          "Days/",
+		DateFormat:                   "2006-01-02",
+	}
+
+	if cfg.ShouldTransformEmptyDatetimeToDate() {
+		t.Error("expected ShouldTransformEmptyDatetimeToDate to be false")
+	}
+	if !cfg.ShouldLinkDailyNotes() {
+		t.Error("expected ShouldLinkDailyNotes to be true")
+	}
+	if cfg.GetDailyNotePathPrefix() != "Days/" {
+		t.Errorf("expected GetDailyNotePathPrefix to be 'Days/', got %q", cfg.GetDailyNotePathPrefix())
+	}
+	if cfg.GetDateFormat() != "2006-01-02" {
+		t.Errorf("expected GetDateFormat to be '2006-01-02', got %q", cfg.GetDateFormat())
+	}
+}
+
+func TestLoad_WithDatesConfig(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	configContent := `
+sync:
+  roots:
+    - url: "https://www.notion.so/workspace/Test-Page-abc123def456abc123def456abc123de"
+output:
+  vault_path: "/data/vault"
+state:
+  file: "/data/state.json"
+options:
+  dates:
+    transform_empty_datetime_to_date: false
+    date_format: "2006-01-02"
+    link_daily_notes: true
+    daily_note_path_prefix: "Journal/"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token-123")
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	dates := cfg.Options.GetDatesConfig()
+	if dates == nil {
+		t.Fatal("expected dates config to be present")
+	}
+
+	if dates.ShouldTransformEmptyDatetimeToDate() {
+		t.Error("expected ShouldTransformEmptyDatetimeToDate to be false")
+	}
+	if !dates.ShouldLinkDailyNotes() {
+		t.Error("expected ShouldLinkDailyNotes to be true")
+	}
+	if dates.GetDailyNotePathPrefix() != "Journal/" {
+		t.Errorf("expected prefix 'Journal/', got %q", dates.GetDailyNotePathPrefix())
+	}
+	if dates.GetDateFormat() != "2006-01-02" {
+		t.Errorf("expected format '2006-01-02', got %q", dates.GetDateFormat())
+	}
+}
+
+func TestLoad_WithoutDatesConfig(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	configContent := `
+sync:
+  roots:
+    - url: "https://www.notion.so/workspace/Test-Page-abc123def456abc123def456abc123de"
+output:
+  vault_path: "/data/vault"
+state:
+  file: "/data/state.json"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token-123")
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	dates := cfg.Options.GetDatesConfig()
+	if dates != nil {
+		t.Error("expected dates config to be nil when not specified")
+	}
+
+	// The Options methods should still return defaults via the DatesConfig methods
+	// which handle nil receivers
+}
+
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string

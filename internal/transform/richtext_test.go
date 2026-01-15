@@ -270,7 +270,7 @@ func TestConvertMention(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := convertMention(tt.mention)
+			got := convertMention(tt.mention, DefaultDateFormatter())
 			if got != tt.want {
 				t.Errorf("convertMention() = %q, want %q", got, tt.want)
 			}

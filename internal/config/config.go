@@ -27,11 +27,77 @@ type StateConfig struct {
 	File string `yaml:"file"`
 }
 
+// DatesConfig contains settings for date formatting in output.
+type DatesConfig struct {
+	// TransformEmptyDatetimeToDate controls whether datetimes with midnight time
+	// (e.g., 2026-01-02T00:00:00Z) are converted to date-only format.
+	// Defaults to true if not specified.
+	TransformEmptyDatetimeToDate *bool `yaml:"transform_empty_datetime_to_date"`
+
+	// DateFormat specifies the Go time format string for date-only values.
+	// Defaults to "02-01-2006" (DD-MM-YYYY) if not specified.
+	// Common formats:
+	//   - "02-01-2006" = DD-MM-YYYY (default)
+	//   - "2006-01-02" = YYYY-MM-DD (ISO)
+	//   - "01/02/2006" = MM/DD/YYYY (US)
+	//   - "02/01/2006" = DD/MM/YYYY (EU)
+	DateFormat string `yaml:"date_format"`
+
+	// LinkDailyNotes controls whether dates are wrapped in Obsidian links.
+	// When true, dates become links like [15-01-2026](Days/15-01-2026.md).
+	// Defaults to false if not specified.
+	LinkDailyNotes *bool `yaml:"link_daily_notes"`
+
+	// DailyNotePathPrefix is the folder path prefix for daily note links.
+	// Example: "Days/" results in links like [15-01-2026](Days/15-01-2026.md).
+	// Only used when LinkDailyNotes is true.
+	DailyNotePathPrefix string `yaml:"daily_note_path_prefix"`
+}
+
+// ShouldTransformEmptyDatetimeToDate returns whether empty datetimes should be
+// converted to date-only format. Defaults to true if not explicitly set.
+func (d *DatesConfig) ShouldTransformEmptyDatetimeToDate() bool {
+	if d == nil || d.TransformEmptyDatetimeToDate == nil {
+		return true
+	}
+	return *d.TransformEmptyDatetimeToDate
+}
+
+// GetDateFormat returns the date format string.
+// Defaults to "02-01-2006" (DD-MM-YYYY) if not set.
+func (d *DatesConfig) GetDateFormat() string {
+	if d == nil || d.DateFormat == "" {
+		return "02-01-2006" // DD-MM-YYYY default
+	}
+	return d.DateFormat
+}
+
+// ShouldLinkDailyNotes returns whether dates should be wrapped in Obsidian links.
+// Defaults to false if not explicitly set.
+func (d *DatesConfig) ShouldLinkDailyNotes() bool {
+	if d == nil || d.LinkDailyNotes == nil {
+		return false
+	}
+	return *d.LinkDailyNotes
+}
+
+// GetDailyNotePathPrefix returns the path prefix for daily note links.
+// Returns empty string if not set.
+func (d *DatesConfig) GetDailyNotePathPrefix() string {
+	if d == nil {
+		return ""
+	}
+	return d.DailyNotePathPrefix
+}
+
 // Options contains optional sync behavior settings.
 type Options struct {
 	// DownloadAttachments controls whether to download Notion-hosted attachments.
 	// Defaults to true if not specified.
 	DownloadAttachments *bool `yaml:"download_attachments"`
+
+	// Dates contains date formatting configuration.
+	Dates *DatesConfig `yaml:"dates"`
 }
 
 // ShouldDownloadAttachments returns whether attachments should be downloaded.
@@ -41,6 +107,11 @@ func (o *Options) ShouldDownloadAttachments() bool {
 		return true
 	}
 	return *o.DownloadAttachments
+}
+
+// GetDatesConfig returns the dates configuration, or nil if not set.
+func (o *Options) GetDatesConfig() *DatesConfig {
+	return o.Dates
 }
 
 // SyncConfig contains the list of roots to sync.

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/jomei/notionapi"
 	"gopkg.in/yaml.v3"
@@ -254,9 +253,14 @@ func MarshalBaseFile(base *BaseFile) ([]byte, error) {
 }
 
 // ExtractEntryData extracts frontmatter data from a Notion database page.
-func ExtractEntryData(page *notionapi.Page, schema *DatabaseSchema) (*EntryData, error) {
+// If dateFormatter is nil, DefaultDateFormatter() is used.
+func ExtractEntryData(page *notionapi.Page, schema *DatabaseSchema, dateFormatter *DateFormatter) (*EntryData, error) {
 	if page == nil {
 		return nil, fmt.Errorf("page is nil")
+	}
+
+	if dateFormatter == nil {
+		dateFormatter = DefaultDateFormatter()
 	}
 
 	entry := &EntryData{
@@ -266,7 +270,7 @@ func ExtractEntryData(page *notionapi.Page, schema *DatabaseSchema) (*EntryData,
 	}
 
 	for name, propValue := range page.Properties {
-		value := extractPropertyValue(propValue)
+		value := extractPropertyValue(propValue, dateFormatter)
 
 		// Check if this is the title property
 		if mapping, ok := schema.Properties[name]; ok && mapping.IsTitle {
@@ -284,7 +288,7 @@ func ExtractEntryData(page *notionapi.Page, schema *DatabaseSchema) (*EntryData,
 }
 
 // extractPropertyValue extracts the value from a Notion property.
-func extractPropertyValue(prop notionapi.Property) any {
+func extractPropertyValue(prop notionapi.Property, df *DateFormatter) any {
 	if prop == nil {
 		return nil
 	}
@@ -323,11 +327,7 @@ func extractPropertyValue(prop notionapi.Property) any {
 		if p.Date == nil || p.Date.Start == nil {
 			return nil
 		}
-		start := formatNotionDate(p.Date.Start)
-		if p.Date.End != nil {
-			return fmt.Sprintf("%s/%s", start, formatNotionDate(p.Date.End))
-		}
-		return start
+		return df.FormatDateRange(p.Date.Start, p.Date.End)
 
 	case *notionapi.CheckboxProperty:
 		return p.Checkbox
@@ -362,10 +362,10 @@ func extractPropertyValue(prop notionapi.Property) any {
 		return links
 
 	case *notionapi.FormulaProperty:
-		return extractFormulaValue(p.Formula)
+		return extractFormulaValue(p.Formula, df)
 
 	case *notionapi.RollupProperty:
-		return extractRollupValue(p.Rollup)
+		return extractRollupValue(p.Rollup, df)
 
 	case *notionapi.PeopleProperty:
 		var names []string
@@ -423,7 +423,7 @@ func extractPropertyValue(prop notionapi.Property) any {
 
 // extractFormulaValue extracts the computed value from a formula property.
 // Formula is notionapi.Formula (not a pointer).
-func extractFormulaValue(formula notionapi.Formula) any {
+func extractFormulaValue(formula notionapi.Formula, df *DateFormatter) any {
 	switch formula.Type {
 	case notionapi.FormulaTypeString:
 		if formula.String != "" {
@@ -435,7 +435,7 @@ func extractFormulaValue(formula notionapi.Formula) any {
 		return formula.Boolean
 	case notionapi.FormulaTypeDate:
 		if formula.Date != nil && formula.Date.Start != nil {
-			return formatNotionDate(formula.Date.Start)
+			return df.FormatDate(formula.Date.Start)
 		}
 	}
 	return nil
@@ -443,20 +443,20 @@ func extractFormulaValue(formula notionapi.Formula) any {
 
 // extractRollupValue extracts the computed value from a rollup property.
 // Rollup is notionapi.Rollup (not a pointer).
-func extractRollupValue(rollup notionapi.Rollup) any {
+func extractRollupValue(rollup notionapi.Rollup, df *DateFormatter) any {
 	switch rollup.Type {
 	case notionapi.RollupTypeNumber:
 		return rollup.Number
 	case notionapi.RollupTypeDate:
 		if rollup.Date != nil && rollup.Date.Start != nil {
-			return formatNotionDate(rollup.Date.Start)
+			return df.FormatDate(rollup.Date.Start)
 		}
 	case notionapi.RollupTypeArray:
 		// For array rollups, recursively extract values
 		if len(rollup.Array) > 0 {
 			var values []any
 			for _, item := range rollup.Array {
-				val := extractPropertyValue(item)
+				val := extractPropertyValue(item, df)
 				if val != nil {
 					values = append(values, val)
 				}
@@ -465,22 +465,6 @@ func extractRollupValue(rollup notionapi.Rollup) any {
 		}
 	}
 	return nil
-}
-
-// formatNotionDate formats a Notion Date for Obsidian frontmatter.
-// If the time is midnight (00:00:00), returns date-only format (YYYY-MM-DD).
-// Otherwise, returns full datetime format for Obsidian's datetime type.
-func formatNotionDate(d *notionapi.Date) string {
-	if d == nil {
-		return ""
-	}
-	t := time.Time(*d)
-	// Check if time is midnight (date-only in Notion)
-	if t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0 {
-		return t.Format("2006-01-02")
-	}
-	// Return full datetime in ISO 8601 format
-	return d.String()
 }
 
 // extractRichText extracts plain text from rich text array.

@@ -20,13 +20,15 @@ type Transformer struct {
 	ctx                  context.Context
 	attachmentDownloader *AttachmentDownloader
 	downloadAttachments  bool
+	dateFormatter        *DateFormatter
 }
 
 // NewTransformer creates a new block transformer.
 func NewTransformer(ctx context.Context, fetcher BlockFetcher) *Transformer {
 	return &Transformer{
-		fetcher: fetcher,
-		ctx:     ctx,
+		fetcher:       fetcher,
+		ctx:           ctx,
+		dateFormatter: DefaultDateFormatter(),
 	}
 }
 
@@ -37,6 +39,21 @@ func NewTransformerWithAttachments(ctx context.Context, fetcher BlockFetcher, do
 		ctx:                  ctx,
 		attachmentDownloader: downloader,
 		downloadAttachments:  downloader != nil,
+		dateFormatter:        DefaultDateFormatter(),
+	}
+}
+
+// NewTransformerWithOptions creates a transformer with custom date formatting.
+func NewTransformerWithOptions(ctx context.Context, fetcher BlockFetcher, downloader *AttachmentDownloader, dateFormatter *DateFormatter) *Transformer {
+	if dateFormatter == nil {
+		dateFormatter = DefaultDateFormatter()
+	}
+	return &Transformer{
+		fetcher:              fetcher,
+		ctx:                  ctx,
+		attachmentDownloader: downloader,
+		downloadAttachments:  downloader != nil,
+		dateFormatter:        dateFormatter,
 	}
 }
 
@@ -44,6 +61,24 @@ func NewTransformerWithAttachments(ctx context.Context, fetcher BlockFetcher, do
 func (t *Transformer) SetAttachmentDownloader(downloader *AttachmentDownloader) {
 	t.attachmentDownloader = downloader
 	t.downloadAttachments = downloader != nil
+}
+
+// SetDateFormatter sets the date formatter for the transformer.
+func (t *Transformer) SetDateFormatter(df *DateFormatter) {
+	if df == nil {
+		df = DefaultDateFormatter()
+	}
+	t.dateFormatter = df
+}
+
+// GetDateFormatter returns the date formatter used by this transformer.
+func (t *Transformer) GetDateFormatter() *DateFormatter {
+	return t.dateFormatter
+}
+
+// richTextToMD is a helper that converts rich text using the transformer's date formatter.
+func (t *Transformer) richTextToMD(richText []notionapi.RichText) string {
+	return RichTextToMarkdownWithFormatter(richText, t.dateFormatter)
 }
 
 // GetDownloadedAttachments returns all attachments downloaded during transformation.
@@ -195,7 +230,7 @@ func (t *Transformer) blockToMarkdown(block notionapi.Block, indent int) (string
 
 // paragraphToMarkdown converts a paragraph block.
 func (t *Transformer) paragraphToMarkdown(b *notionapi.ParagraphBlock, indent string) (string, error) {
-	text := RichTextToMarkdown(b.Paragraph.RichText)
+	text := t.richTextToMD(b.Paragraph.RichText)
 
 	var sb strings.Builder
 	sb.WriteString(indent + text + "\n\n")
@@ -218,7 +253,7 @@ func (t *Transformer) paragraphToMarkdown(b *notionapi.ParagraphBlock, indent st
 
 // heading1ToMarkdown converts heading 1 blocks.
 func (t *Transformer) heading1ToMarkdown(b *notionapi.Heading1Block, indent string) (string, error) {
-	text := RichTextToMarkdown(b.Heading1.RichText)
+	text := t.richTextToMD(b.Heading1.RichText)
 
 	if b.Heading1.IsToggleable {
 		return t.toggleableHeadingToMarkdown(string(b.ID), text, b.HasChildren, indent)
@@ -229,7 +264,7 @@ func (t *Transformer) heading1ToMarkdown(b *notionapi.Heading1Block, indent stri
 
 // heading2ToMarkdown converts heading 2 blocks.
 func (t *Transformer) heading2ToMarkdown(b *notionapi.Heading2Block, indent string) (string, error) {
-	text := RichTextToMarkdown(b.Heading2.RichText)
+	text := t.richTextToMD(b.Heading2.RichText)
 
 	if b.Heading2.IsToggleable {
 		return t.toggleableHeadingToMarkdown(string(b.ID), text, b.HasChildren, indent)
@@ -240,7 +275,7 @@ func (t *Transformer) heading2ToMarkdown(b *notionapi.Heading2Block, indent stri
 
 // heading3ToMarkdown converts heading 3 blocks.
 func (t *Transformer) heading3ToMarkdown(b *notionapi.Heading3Block, indent string) (string, error) {
-	text := RichTextToMarkdown(b.Heading3.RichText)
+	text := t.richTextToMD(b.Heading3.RichText)
 
 	if b.Heading3.IsToggleable {
 		return t.toggleableHeadingToMarkdown(string(b.ID), text, b.HasChildren, indent)
@@ -281,7 +316,7 @@ func (t *Transformer) toggleableHeadingToMarkdown(blockID, title string, hasChil
 
 // bulletedListItemToMarkdown converts bulleted list items.
 func (t *Transformer) bulletedListItemToMarkdown(b *notionapi.BulletedListItemBlock, indent string) (string, error) {
-	text := RichTextToMarkdown(b.BulletedListItem.RichText)
+	text := t.richTextToMD(b.BulletedListItem.RichText)
 
 	var sb strings.Builder
 	sb.WriteString(indent + "- " + text + "\n")
@@ -304,7 +339,7 @@ func (t *Transformer) bulletedListItemToMarkdown(b *notionapi.BulletedListItemBl
 
 // numberedListItemToMarkdown converts numbered list items.
 func (t *Transformer) numberedListItemToMarkdown(b *notionapi.NumberedListItemBlock, indent string) (string, error) {
-	text := RichTextToMarkdown(b.NumberedListItem.RichText)
+	text := t.richTextToMD(b.NumberedListItem.RichText)
 
 	var sb strings.Builder
 	// Use 1. for all items - markdown renderers handle numbering
@@ -328,7 +363,7 @@ func (t *Transformer) numberedListItemToMarkdown(b *notionapi.NumberedListItemBl
 
 // todoToMarkdown converts todo/checkbox blocks.
 func (t *Transformer) todoToMarkdown(b *notionapi.ToDoBlock, indent string) (string, error) {
-	text := RichTextToMarkdown(b.ToDo.RichText)
+	text := t.richTextToMD(b.ToDo.RichText)
 	checkbox := "[ ]"
 	if b.ToDo.Checked {
 		checkbox = "[x]"
@@ -355,7 +390,7 @@ func (t *Transformer) todoToMarkdown(b *notionapi.ToDoBlock, indent string) (str
 
 // toggleToMarkdown converts toggle blocks to foldable callouts.
 func (t *Transformer) toggleToMarkdown(b *notionapi.ToggleBlock, indent string) (string, error) {
-	title := RichTextToMarkdown(b.Toggle.RichText)
+	title := t.richTextToMD(b.Toggle.RichText)
 
 	var sb strings.Builder
 	sb.WriteString(indent + "> [!faq]- " + title + "\n")
@@ -405,7 +440,7 @@ func (t *Transformer) codeToMarkdown(b *notionapi.CodeBlock, indent string) (str
 
 	// Add caption if present
 	if len(b.Code.Caption) > 0 {
-		caption := RichTextToMarkdown(b.Code.Caption)
+		caption := t.richTextToMD(b.Code.Caption)
 		sb.WriteString(indent + "*" + caption + "*\n\n")
 	}
 
@@ -414,7 +449,7 @@ func (t *Transformer) codeToMarkdown(b *notionapi.CodeBlock, indent string) (str
 
 // quoteToMarkdown converts quote blocks.
 func (t *Transformer) quoteToMarkdown(b *notionapi.QuoteBlock, indent string) (string, error) {
-	text := RichTextToMarkdown(b.Quote.RichText)
+	text := t.richTextToMD(b.Quote.RichText)
 
 	var sb strings.Builder
 	lines := strings.Split(text, "\n")
@@ -449,7 +484,7 @@ func (t *Transformer) quoteToMarkdown(b *notionapi.QuoteBlock, indent string) (s
 
 // calloutToMarkdown converts callout blocks to Obsidian callouts.
 func (t *Transformer) calloutToMarkdown(b *notionapi.CalloutBlock, indent string) (string, error) {
-	text := RichTextToMarkdown(b.Callout.RichText)
+	text := t.richTextToMD(b.Callout.RichText)
 	calloutType := "note"
 
 	// Map icon to callout type
@@ -538,7 +573,7 @@ func (t *Transformer) tableToMarkdown(b *notionapi.TableBlock, indent string) (s
 
 		sb.WriteString(indent + "|")
 		for _, cell := range row.TableRow.Cells {
-			cellText := RichTextToMarkdown(cell)
+			cellText := t.richTextToMD(cell)
 			sb.WriteString(" " + cellText + " |")
 		}
 		sb.WriteString("\n")
