@@ -360,7 +360,7 @@ func syncPageRecursive(sc *syncContext, resource *notion.Resource, folderPath st
 		return fmt.Errorf("fetching page blocks: %w", err)
 	}
 
-	filename := sanitizeFilename(resource.Title) + ".md"
+	filename := transform.SanitizeFilename(resource.Title) + ".md"
 	localPath := filename
 	if folderPath != "" {
 		localPath = folderPath + "/" + filename
@@ -484,7 +484,7 @@ func processChildPageWithBlocks(sc *syncContext, resource *notion.Resource, bloc
 		return nil
 	}
 
-	filename := sanitizeFilename(resource.Title) + ".md"
+	filename := transform.SanitizeFilename(resource.Title) + ".md"
 	localPath := filename
 	if folderPath != "" {
 		localPath = folderPath + "/" + filename
@@ -622,9 +622,9 @@ func syncDatabase(sc *syncContext, resource *notion.Resource, folderName string)
 	}
 
 	// Determine folder path for entries
-	folder := sanitizeFilename(resource.Title)
+	folder := transform.SanitizeFilename(resource.Title)
 	if folderName != "" && !isUUIDPrefix(folderName) {
-		folder = sanitizeFilename(folderName)
+		folder = transform.SanitizeFilename(folderName)
 	}
 
 	// Query database entries
@@ -828,29 +828,4 @@ func isUUIDPrefix(name string) bool {
 		}
 	}
 	return true
-}
-
-// sanitizeFilename makes a string safe for use as a filename.
-func sanitizeFilename(name string) string {
-	replacer := strings.NewReplacer(
-		"/", "-",
-		"\\", "-",
-		":", "-",
-		"*", "",
-		"?", "",
-		"\"", "",
-		"<", "",
-		">", "",
-		"|", "",
-		"\n", " ",
-		"\r", "",
-	)
-	name = replacer.Replace(name)
-	name = strings.TrimSpace(name)
-
-	if len(name) > 200 {
-		name = name[:200]
-	}
-
-	return name
 }

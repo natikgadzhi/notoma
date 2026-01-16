@@ -23,38 +23,46 @@ type Transformer struct {
 	dateFormatter        *DateFormatter
 }
 
-// NewTransformer creates a new block transformer.
-func NewTransformer(ctx context.Context, fetcher BlockFetcher) *Transformer {
-	return &Transformer{
+// TransformerOption configures a Transformer.
+type TransformerOption func(*Transformer)
+
+// WithAttachmentDownloader sets the attachment downloader for the transformer.
+func WithAttachmentDownloader(downloader *AttachmentDownloader) TransformerOption {
+	return func(t *Transformer) {
+		t.attachmentDownloader = downloader
+		t.downloadAttachments = downloader != nil
+	}
+}
+
+// WithDateFormatter sets the date formatter for the transformer.
+func WithDateFormatter(df *DateFormatter) TransformerOption {
+	return func(t *Transformer) {
+		if df != nil {
+			t.dateFormatter = df
+		}
+	}
+}
+
+// NewTransformer creates a new block transformer with optional configuration.
+func NewTransformer(ctx context.Context, fetcher BlockFetcher, opts ...TransformerOption) *Transformer {
+	t := &Transformer{
 		fetcher:       fetcher,
 		ctx:           ctx,
 		dateFormatter: DefaultDateFormatter(),
 	}
-}
-
-// NewTransformerWithAttachments creates a transformer that downloads attachments.
-func NewTransformerWithAttachments(ctx context.Context, fetcher BlockFetcher, downloader *AttachmentDownloader) *Transformer {
-	return &Transformer{
-		fetcher:              fetcher,
-		ctx:                  ctx,
-		attachmentDownloader: downloader,
-		downloadAttachments:  downloader != nil,
-		dateFormatter:        DefaultDateFormatter(),
+	for _, opt := range opts {
+		opt(t)
 	}
+	return t
 }
 
-// NewTransformerWithOptions creates a transformer with custom date formatting.
+// NewTransformerWithOptions creates a transformer with attachments and date formatting.
+// Deprecated: Use NewTransformer with WithAttachmentDownloader and WithDateFormatter options.
 func NewTransformerWithOptions(ctx context.Context, fetcher BlockFetcher, downloader *AttachmentDownloader, dateFormatter *DateFormatter) *Transformer {
-	if dateFormatter == nil {
-		dateFormatter = DefaultDateFormatter()
-	}
-	return &Transformer{
-		fetcher:              fetcher,
-		ctx:                  ctx,
-		attachmentDownloader: downloader,
-		downloadAttachments:  downloader != nil,
-		dateFormatter:        dateFormatter,
-	}
+	return NewTransformer(ctx, fetcher,
+		WithAttachmentDownloader(downloader),
+		WithDateFormatter(dateFormatter),
+	)
 }
 
 // SetAttachmentDownloader sets the attachment downloader for the transformer.
@@ -314,16 +322,13 @@ func (t *Transformer) toggleableHeadingToMarkdown(blockID, title string, hasChil
 	return sb.String(), nil
 }
 
-// bulletedListItemToMarkdown converts bulleted list items.
-func (t *Transformer) bulletedListItemToMarkdown(b *notionapi.BulletedListItemBlock, indent string) (string, error) {
-	text := t.richTextToMD(b.BulletedListItem.RichText)
-
+// listItemToMarkdown handles common list item conversion with nested children.
+func (t *Transformer) listItemToMarkdown(blockID string, prefix, indent string, hasChildren bool) (string, error) {
 	var sb strings.Builder
-	sb.WriteString(indent + "- " + text + "\n")
+	sb.WriteString(prefix)
 
-	// Handle children (nested items)
-	if b.HasChildren {
-		children, err := t.fetchChildren(string(b.ID))
+	if hasChildren {
+		children, err := t.fetchChildren(blockID)
 		if err != nil {
 			return "", err
 		}
@@ -337,28 +342,19 @@ func (t *Transformer) bulletedListItemToMarkdown(b *notionapi.BulletedListItemBl
 	return sb.String(), nil
 }
 
+// bulletedListItemToMarkdown converts bulleted list items.
+func (t *Transformer) bulletedListItemToMarkdown(b *notionapi.BulletedListItemBlock, indent string) (string, error) {
+	text := t.richTextToMD(b.BulletedListItem.RichText)
+	prefix := indent + "- " + text + "\n"
+	return t.listItemToMarkdown(string(b.ID), prefix, indent, b.HasChildren)
+}
+
 // numberedListItemToMarkdown converts numbered list items.
 func (t *Transformer) numberedListItemToMarkdown(b *notionapi.NumberedListItemBlock, indent string) (string, error) {
 	text := t.richTextToMD(b.NumberedListItem.RichText)
-
-	var sb strings.Builder
 	// Use 1. for all items - markdown renderers handle numbering
-	sb.WriteString(indent + "1. " + text + "\n")
-
-	// Handle children
-	if b.HasChildren {
-		children, err := t.fetchChildren(string(b.ID))
-		if err != nil {
-			return "", err
-		}
-		childMd, err := t.blocksToMarkdownWithIndent(children, len(indent)/4+1)
-		if err != nil {
-			return "", err
-		}
-		sb.WriteString(childMd)
-	}
-
-	return sb.String(), nil
+	prefix := indent + "1. " + text + "\n"
+	return t.listItemToMarkdown(string(b.ID), prefix, indent, b.HasChildren)
 }
 
 // todoToMarkdown converts todo/checkbox blocks.
@@ -368,24 +364,8 @@ func (t *Transformer) todoToMarkdown(b *notionapi.ToDoBlock, indent string) (str
 	if b.ToDo.Checked {
 		checkbox = "[x]"
 	}
-
-	var sb strings.Builder
-	sb.WriteString(indent + "- " + checkbox + " " + text + "\n")
-
-	// Handle children
-	if b.HasChildren {
-		children, err := t.fetchChildren(string(b.ID))
-		if err != nil {
-			return "", err
-		}
-		childMd, err := t.blocksToMarkdownWithIndent(children, len(indent)/4+1)
-		if err != nil {
-			return "", err
-		}
-		sb.WriteString(childMd)
-	}
-
-	return sb.String(), nil
+	prefix := indent + "- " + checkbox + " " + text + "\n"
+	return t.listItemToMarkdown(string(b.ID), prefix, indent, b.HasChildren)
 }
 
 // toggleToMarkdown converts toggle blocks to foldable callouts.

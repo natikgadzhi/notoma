@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/jomei/notionapi"
+	"github.com/natikgadzhi/notion-based/internal/transform"
 )
 
 func TestExtractChildPages(t *testing.T) {
@@ -199,9 +200,9 @@ func TestSanitizeFilename(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := sanitizeFilename(tt.input)
+			result := transform.SanitizeFilename(tt.input)
 			if result != tt.expected {
-				t.Errorf("sanitizeFilename(%q) = %q, want %q", tt.input, result, tt.expected)
+				t.Errorf("SanitizeFilename(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
 		})
 	}

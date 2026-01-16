@@ -72,7 +72,7 @@ func ParseDatabaseSchema(db *notionapi.Database) (*DatabaseSchema, error) {
 	}
 
 	schema := &DatabaseSchema{
-		Title:      extractRichText(db.Title),
+		Title:      RichTextToPlain(db.Title),
 		Properties: make(map[string]PropertyMapping),
 	}
 
@@ -295,10 +295,10 @@ func extractPropertyValue(prop notionapi.Property, df *DateFormatter) any {
 
 	switch p := prop.(type) {
 	case *notionapi.TitleProperty:
-		return extractRichText(p.Title)
+		return RichTextToPlain(p.Title)
 
 	case *notionapi.RichTextProperty:
-		return extractRichText(p.RichText)
+		return RichTextToPlain(p.RichText)
 
 	case *notionapi.NumberProperty:
 		// NumberProperty.Number is float64, not a pointer
@@ -467,15 +467,6 @@ func extractRollupValue(rollup notionapi.Rollup, df *DateFormatter) any {
 	return nil
 }
 
-// extractRichText extracts plain text from rich text array.
-func extractRichText(richText []notionapi.RichText) string {
-	var sb strings.Builder
-	for _, rt := range richText {
-		sb.WriteString(rt.PlainText)
-	}
-	return sb.String()
-}
-
 // extractPageIcon extracts the emoji icon from a page's icon property.
 func extractPageIcon(page *notionapi.Page) string {
 	if page == nil || page.Icon == nil {
@@ -539,7 +530,7 @@ func BuildDatabaseEntry(entry *EntryData, markdownContent string) (*DatabaseEntr
 	}
 
 	// Sanitize filename
-	filename := sanitizeFilename(entry.Title)
+	filename := SanitizeFilename(entry.Title)
 	if filename == "" {
 		filename = entry.PageID
 	}
@@ -551,8 +542,8 @@ func BuildDatabaseEntry(entry *EntryData, markdownContent string) (*DatabaseEntr
 	}, nil
 }
 
-// sanitizeFilename makes a string safe for use as a filename.
-func sanitizeFilename(name string) string {
+// SanitizeFilename makes a string safe for use as a filename.
+func SanitizeFilename(name string) string {
 	// Replace characters that are problematic in filenames
 	replacer := strings.NewReplacer(
 		"/", "-",
