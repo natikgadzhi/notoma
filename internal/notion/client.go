@@ -375,3 +375,56 @@ func ExtractDatabaseIcon(db *notionapi.Database) string {
 	}
 	return ""
 }
+
+// PropertyNotFoundError indicates that a property doesn't exist on a page/database.
+type PropertyNotFoundError struct {
+	PropertyName string
+	PageID       string
+}
+
+func (e *PropertyNotFoundError) Error() string {
+	return fmt.Sprintf("property %q not found on page %s", e.PropertyName, e.PageID)
+}
+
+// UpdatePageTimestamp updates the last_notoma_sync_at property on a page.
+// Returns PropertyNotFoundError if the property doesn't exist (graceful failure).
+func (c *Client) UpdatePageTimestamp(ctx context.Context, pageID string, timestamp time.Time) error {
+	if err := c.limiter.Wait(ctx); err != nil {
+		return err
+	}
+
+	c.logger.Debug("updating page timestamp", "id", pageID, "timestamp", timestamp)
+
+	// Create the date property value
+	dateObj := notionapi.Date(timestamp)
+	props := notionapi.Properties{
+		"last_notoma_sync_at": notionapi.DateProperty{
+			Type: notionapi.PropertyTypeDate,
+			Date: &notionapi.DateObject{
+				Start: &dateObj,
+			},
+		},
+	}
+
+	req := &notionapi.PageUpdateRequest{
+		Properties: props,
+	}
+
+	_, err := c.api.Page.Update(ctx, notionapi.PageID(pageID), req)
+	if err != nil {
+		// Check if this is a property not found error
+		var apiErr *notionapi.Error
+		if errors.As(err, &apiErr) {
+			// validation_error typically means the property doesn't exist
+			if apiErr.Code == "validation_error" {
+				return &PropertyNotFoundError{
+					PropertyName: "last_notoma_sync_at",
+					PageID:       pageID,
+				}
+			}
+		}
+		return c.handleError(err)
+	}
+
+	return nil
+}

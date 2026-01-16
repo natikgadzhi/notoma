@@ -416,6 +416,75 @@ state:
 	// which handle nil receivers
 }
 
+func TestOptions_ShouldUpdateNotionTimestamp_DefaultsToFalse(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	// Config without update_notion_timestamp specified
+	configContent := `
+sync:
+  roots:
+    - url: "https://www.notion.so/workspace/abc123def456abc123def456abc123de"
+output:
+  vault_path: "/data/vault"
+state:
+  file: "/data/state.json"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token")
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Should default to false when not specified
+	if cfg.Options.ShouldUpdateNotionTimestamp() {
+		t.Error("expected ShouldUpdateNotionTimestamp() to default to false when not specified")
+	}
+
+	// The underlying pointer should be nil
+	if cfg.Options.UpdateNotionTimestamp != nil {
+		t.Error("expected UpdateNotionTimestamp to be nil when not specified")
+	}
+}
+
+func TestOptions_ShouldUpdateNotionTimestamp_ExplicitTrue(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+
+	// Config with update_notion_timestamp explicitly set to true
+	configContent := `
+sync:
+  roots:
+    - url: "https://www.notion.so/workspace/abc123def456abc123def456abc123de"
+output:
+  vault_path: "/data/vault"
+state:
+  file: "/data/state.json"
+options:
+  update_notion_timestamp: true
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config file: %v", err)
+	}
+
+	t.Setenv("NOTION_TOKEN", "test-token")
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Should be true when explicitly set to true
+	if !cfg.Options.ShouldUpdateNotionTimestamp() {
+		t.Error("expected ShouldUpdateNotionTimestamp() to be true when explicitly set to true")
+	}
+}
+
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -28,16 +28,17 @@ var (
 
 // syncContext holds dependencies for sync operations, reducing parameter count.
 type syncContext struct {
-	ctx           context.Context
-	client        *notion.Client
-	workerPool    *notion.WorkerPool
-	writer        *writer.Writer
-	logger        *slog.Logger
-	state         *sync.SyncState
-	tuiRunner     *tui.Runner
-	attDownloader *transform.AttachmentDownloader
-	dateFormatter *transform.DateFormatter
-	dryRun        bool
+	ctx              context.Context
+	client           *notion.Client
+	workerPool       *notion.WorkerPool
+	writer           *writer.Writer
+	logger           *slog.Logger
+	state            *sync.SyncState
+	tuiRunner        *tui.Runner
+	attDownloader    *transform.AttachmentDownloader
+	dateFormatter    *transform.DateFormatter
+	timestampUpdater *sync.TimestampUpdater
+	dryRun           bool
 }
 
 var syncCmd = &cobra.Command{
@@ -193,18 +194,25 @@ func runSync(cmd *cobra.Command, args []string) error {
 	// Create date formatter from config
 	dateFormatter := transform.NewDateFormatter(cfg.Options.GetDatesConfig())
 
+	// Create timestamp updater if enabled
+	timestampUpdater := sync.NewTimestampUpdater(client, logger, cfg.Options.ShouldUpdateNotionTimestamp(), dryRun)
+	if timestampUpdater.IsEnabled() {
+		logger.Info("Notion timestamp updates enabled")
+	}
+
 	// Create sync context to pass to sync functions
 	sc := &syncContext{
-		ctx:           ctx,
-		client:        client,
-		workerPool:    workerPool,
-		writer:        w,
-		logger:        logger,
-		state:         state,
-		tuiRunner:     tuiRunner,
-		attDownloader: attDownloader,
-		dateFormatter: dateFormatter,
-		dryRun:        dryRun,
+		ctx:              ctx,
+		client:           client,
+		workerPool:       workerPool,
+		writer:           w,
+		logger:           logger,
+		state:            state,
+		tuiRunner:        tuiRunner,
+		attDownloader:    attDownloader,
+		dateFormatter:    dateFormatter,
+		timestampUpdater: timestampUpdater,
+		dryRun:           dryRun,
 	}
 
 	// Process each root
@@ -391,6 +399,9 @@ func syncPageRecursive(sc *syncContext, resource *notion.Resource, folderPath st
 			LocalPath:    localPath,
 		})
 
+		// Update timestamp in Notion
+		_ = sc.timestampUpdater.UpdateAfterSync(sc.ctx, resource.ID)
+
 		sc.logger.Info("synced page", "title", resource.Title, "file", localPath)
 	}
 
@@ -514,6 +525,9 @@ func processChildPageWithBlocks(sc *syncContext, resource *notion.Resource, bloc
 			LastModified: lastModified,
 			LocalPath:    localPath,
 		})
+
+		// Update timestamp in Notion
+		_ = sc.timestampUpdater.UpdateAfterSync(sc.ctx, resource.ID)
 
 		sc.logger.Info("synced child page", "title", resource.Title, "file", localPath)
 	}
@@ -757,6 +771,10 @@ func syncDatabase(sc *syncContext, resource *notion.Resource, folderName string)
 				LastModified: page.LastEditedTime,
 				LocalFile:    filename,
 			})
+
+			// Update timestamp in Notion
+			_ = sc.timestampUpdater.UpdateAfterSync(sc.ctx, pageID)
+
 			if sc.tuiRunner != nil {
 				sc.tuiRunner.SetDone(pageID)
 			}

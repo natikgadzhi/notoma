@@ -98,6 +98,12 @@ type Options struct {
 
 	// Dates contains date formatting configuration.
 	Dates *DatesConfig `yaml:"dates"`
+
+	// UpdateNotionTimestamp controls whether to update synced pages in Notion
+	// with a last_notoma_sync_at property containing the sync timestamp.
+	// This helps users identify stale pages. Defaults to false if not specified.
+	// Note: The Notion database/page must have a "last_notoma_sync_at" date property.
+	UpdateNotionTimestamp *bool `yaml:"update_notion_timestamp"`
 }
 
 // ShouldDownloadAttachments returns whether attachments should be downloaded.
@@ -112,6 +118,15 @@ func (o *Options) ShouldDownloadAttachments() bool {
 // GetDatesConfig returns the dates configuration, or nil if not set.
 func (o *Options) GetDatesConfig() *DatesConfig {
 	return o.Dates
+}
+
+// ShouldUpdateNotionTimestamp returns whether to update synced pages in Notion
+// with a sync timestamp. Defaults to false if not explicitly set.
+func (o *Options) ShouldUpdateNotionTimestamp() bool {
+	if o.UpdateNotionTimestamp == nil {
+		return false
+	}
+	return *o.UpdateNotionTimestamp
 }
 
 // SyncConfig contains the list of roots to sync.
