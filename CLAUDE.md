@@ -40,6 +40,7 @@ docker run --rm notoma --help  # Must show help
 - Write tests for new code
 - Run the full verification checklist
 - Fix issues before proceeding
+- Read existing code before writing new code
 
 **Never:**
 - Comment out failing tests
@@ -47,6 +48,7 @@ docker run --rm notoma --help  # Must show help
 - Proceed with broken tests or Docker build
 - Commit secrets or `.env` files
 - Use goroutines without explicit need (prefer sequential code)
+- Modify this file or the project spec
 
 ## Commit Messages
 
@@ -129,3 +131,64 @@ notoma status --config config.yaml         # Show sync state
 notoma validate --config config.yaml       # Validate config and connectivity
 notoma version                             # Show version
 ```
+
+## Global Flags
+
+| Flag | Description |
+|------|-------------|
+| `--config` / `-c` | Path to config file (default: `config.yaml`) |
+| `--debug` | Print verbose debug logs to stderr |
+
+## Multi-Agent Work Environment
+
+This section outlines how lead and worker agents collaborate on this project.
+
+### Core Workflow
+
+The lead agent orchestrates by reading project specs, decomposing work into phases, and spawning worker agents to execute tasks concurrently. Workers operate in isolated git worktrees, implement features, and submit pull requests for review.
+
+### Agent Roles
+
+**Lead Agent:**
+- Reads `README.md` and `CLAUDE.md` to understand requirements
+- Creates a phased task plan with clear dependencies
+- Spawns worker agents with explicit task details
+- Monitors progress and assigns new work as agents become available
+- Resolves conflicts and coordinates integration efforts
+
+**Worker Agents:**
+- Execute tasks in dedicated git worktrees on feature branches
+- Read existing code before writing new code
+- Run quality checks: `go build`, `go vet`, `go test`
+- Commit work and push to create pull requests
+- Keep commits atomic with clear messages
+
+**Reviewer Agents:**
+- Check out PR branches in separate worktrees
+- Verify builds, tests, and acceptance criteria
+- Conduct code quality and security reviews
+- Post structured feedback via `gh pr review`
+
+### Git & Worktree Requirements
+
+Each task gets its own worktree and branch. Workers must never commit directly to main — all code changes require a pull request. Convention: `git worktree add ../notoma-task-N -b task-N-description`.
+
+### Task Organization
+
+Tasks move between three states reflecting their status:
+- `backlog/` — unstarted tasks
+- `in-progress/` — active tasks
+- `done/` — completed tasks
+
+### Quality Standards
+
+Every implementation requires: build succeeds, linting passes, tests run, and features satisfy acceptance criteria. Reviewers conduct security and code quality checks before approving merges.
+
+### Key Rules
+
+- Never modify the project spec document
+- Always read existing code before writing
+- Write tests for every task
+- Keep commits atomic and focused
+- Declare explicit dependencies between tasks
+- Verify with end-to-end tests where applicable

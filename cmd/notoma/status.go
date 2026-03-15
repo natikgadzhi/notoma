@@ -22,7 +22,6 @@ var statusCmd = &cobra.Command{
 }
 
 func init() {
-	statusCmd.Flags().StringVarP(&configPath, "config", "c", "config.yaml", "path to config file")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {

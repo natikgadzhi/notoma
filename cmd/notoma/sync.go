@@ -52,15 +52,13 @@ modified since the last sync. Use --force to perform a full resync.
 
 When running in a terminal, a TUI progress display is shown by default.
 Use --quiet to disable the TUI and show plain log output instead.
-Use --verbose to enable debug logging (shown alongside TUI or in quiet mode).`,
+Use --debug to enable debug logging (shown alongside TUI or in quiet mode).`,
 	RunE: runSync,
 }
 
 func init() {
-	syncCmd.Flags().StringVarP(&configPath, "config", "c", "config.yaml", "path to config file")
 	syncCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "preview changes without writing files")
 	syncCmd.Flags().BoolVarP(&force, "force", "f", false, "ignore state and perform full resync")
-	syncCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "enable verbose logging")
 	syncCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "disable TUI, use plain log output")
 }
 
@@ -69,12 +67,12 @@ func runSync(cmd *cobra.Command, args []string) error {
 	// Use TUI by default if stdout is a TTY and quiet mode is not enabled
 	useTUI := !quiet && term.IsTerminal(int(os.Stdout.Fd()))
 
-	// Set up logging - suppress in TUI mode unless verbose
+	// Set up logging - suppress in TUI mode unless debug
 	var logOutput io.Writer = os.Stderr
-	if useTUI && !verbose {
+	if useTUI && !debug {
 		logOutput = io.Discard
 	}
-	logger := setupLogger(logOutput, verbose)
+	logger := setupLogger(logOutput, debug)
 
 	// Set up context with signal handling
 	ctx, cancel := setupSignalHandler(logger)

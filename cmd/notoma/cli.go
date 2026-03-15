@@ -14,18 +14,18 @@ import (
 // Shared flag variables for all commands.
 var (
 	configPath string
-	verbose    bool
+	debug      bool
 )
 
 // setupLogger creates and sets the default logger.
 // If output is nil, logs go to stderr.
-func setupLogger(output io.Writer, verbose bool) *slog.Logger {
+func setupLogger(output io.Writer, debug bool) *slog.Logger {
 	if output == nil {
 		output = os.Stderr
 	}
 
 	level := slog.LevelInfo
-	if verbose {
+	if debug {
 		level = slog.LevelDebug
 	}
 

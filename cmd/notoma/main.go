@@ -45,6 +45,9 @@ var versionCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "config.yaml", "path to config file")
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "print verbose debug logs to stderr")
+
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(validateCmd)
