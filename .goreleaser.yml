@@ -1,0 +1,53 @@
+version: 2
+project_name: notoma
+
+builds:
+  - id: notoma
+    main: ./cmd/notoma
+    binary: notoma
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+archives:
+  - id: default
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: darwin
+        formats:
+          - zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: natikgadzhi
+    name: notoma
+
+brews:
+  - repository:
+      owner: natikgadzhi
+      name: homebrew-taps
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/natikgadzhi/notoma"
+    description: "One-way sync tool from Notion to Obsidian"
+    license: "MIT"
+    test: |
+      system "#{bin}/notoma", "--help"

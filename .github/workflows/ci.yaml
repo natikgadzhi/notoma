@@ -49,6 +49,8 @@ jobs:
     needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -60,3 +62,9 @@ jobs:
 
       - name: Verify binary runs
         run: ./notoma --help
+
+      - name: GoReleaser snapshot build
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'
+          args: build --snapshot --clean
