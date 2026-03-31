@@ -264,7 +264,7 @@ func (t *Transformer) heading1ToMarkdown(b *notionapi.Heading1Block, indent stri
 	text := t.richTextToMD(b.Heading1.RichText)
 
 	if b.Heading1.IsToggleable {
-		return t.toggleableHeadingToMarkdown(string(b.ID), text, b.HasChildren, indent)
+		return t.toggleableHeadingToMarkdown(string(b.ID), text, 1, b.HasChildren, indent)
 	}
 
 	return fmt.Sprintf("%s# %s\n\n", indent, text), nil
@@ -275,7 +275,7 @@ func (t *Transformer) heading2ToMarkdown(b *notionapi.Heading2Block, indent stri
 	text := t.richTextToMD(b.Heading2.RichText)
 
 	if b.Heading2.IsToggleable {
-		return t.toggleableHeadingToMarkdown(string(b.ID), text, b.HasChildren, indent)
+		return t.toggleableHeadingToMarkdown(string(b.ID), text, 2, b.HasChildren, indent)
 	}
 
 	return fmt.Sprintf("%s## %s\n\n", indent, text), nil
@@ -286,38 +286,30 @@ func (t *Transformer) heading3ToMarkdown(b *notionapi.Heading3Block, indent stri
 	text := t.richTextToMD(b.Heading3.RichText)
 
 	if b.Heading3.IsToggleable {
-		return t.toggleableHeadingToMarkdown(string(b.ID), text, b.HasChildren, indent)
+		return t.toggleableHeadingToMarkdown(string(b.ID), text, 3, b.HasChildren, indent)
 	}
 
 	return fmt.Sprintf("%s### %s\n\n", indent, text), nil
 }
 
-// toggleableHeadingToMarkdown converts a toggleable heading to a foldable callout with children.
-func (t *Transformer) toggleableHeadingToMarkdown(blockID, title string, hasChildren bool, indent string) (string, error) {
+// toggleableHeadingToMarkdown converts a toggleable heading to a plain heading with children.
+// Obsidian headings are natively toggleable, so no callout wrapping is needed.
+func (t *Transformer) toggleableHeadingToMarkdown(blockID, title string, level int, hasChildren bool, indent string) (string, error) {
 	var sb strings.Builder
-	sb.WriteString(indent + "> [!faq]- " + title + "\n")
+	sb.WriteString(indent + strings.Repeat("#", level) + " " + title + "\n\n")
 
-	// Fetch and render children
+	// Fetch and render children as normal block content
 	if hasChildren {
 		children, err := t.fetchChildren(blockID)
 		if err != nil {
 			return "", err
 		}
-		for _, child := range children {
-			childMd, err := t.blockToMarkdown(child, 0)
-			if err != nil {
-				return "", err
-			}
-			// Prefix each line with > for callout
-			lines := strings.Split(childMd, "\n")
-			for _, line := range lines {
-				if line != "" {
-					sb.WriteString(indent + "> " + line + "\n")
-				}
-			}
+		childMd, err := t.blocksToMarkdownWithIndent(children, 0)
+		if err != nil {
+			return "", err
 		}
+		sb.WriteString(childMd)
 	}
-	sb.WriteString("\n")
 
 	return sb.String(), nil
 }

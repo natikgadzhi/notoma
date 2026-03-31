@@ -79,7 +79,7 @@ func TestHeadingBlocks(t *testing.T) {
 			expected: "### Heading 3\n\n",
 		},
 		{
-			name: "toggleable heading",
+			name: "toggleable heading 1",
 			block: &notionapi.Heading1Block{
 				BasicBlock: notionapi.BasicBlock{Type: notionapi.BlockTypeHeading1},
 				Heading1: notionapi.Heading{
@@ -87,7 +87,29 @@ func TestHeadingBlocks(t *testing.T) {
 					IsToggleable: true,
 				},
 			},
-			expected: "> [!faq]- Toggleable\n\n",
+			expected: "# Toggleable\n\n",
+		},
+		{
+			name: "toggleable heading 2",
+			block: &notionapi.Heading2Block{
+				BasicBlock: notionapi.BasicBlock{Type: notionapi.BlockTypeHeading2},
+				Heading2: notionapi.Heading{
+					RichText:     newRichText("Toggleable H2"),
+					IsToggleable: true,
+				},
+			},
+			expected: "## Toggleable H2\n\n",
+		},
+		{
+			name: "toggleable heading 3",
+			block: &notionapi.Heading3Block{
+				BasicBlock: notionapi.BasicBlock{Type: notionapi.BlockTypeHeading3},
+				Heading3: notionapi.Heading{
+					RichText:     newRichText("Toggleable H3"),
+					IsToggleable: true,
+				},
+			},
+			expected: "### Toggleable H3\n\n",
 		},
 	}
 
@@ -109,23 +131,27 @@ func TestToggleableHeadingWithChildren(t *testing.T) {
 	fetcher := &mockFetcher{
 		children: map[string][]notionapi.Block{
 			"heading-id": {
-				&notionapi.ParagraphBlock{
-					BasicBlock: notionapi.BasicBlock{Type: notionapi.BlockTypeParagraph},
-					Paragraph:  notionapi.Paragraph{RichText: newRichText("Hidden content under heading")},
+				&notionapi.BulletedListItemBlock{
+					BasicBlock:       notionapi.BasicBlock{Type: notionapi.BlockTypeBulletedListItem},
+					BulletedListItem: notionapi.ListItem{RichText: newRichText("Retro")},
+				},
+				&notionapi.BulletedListItemBlock{
+					BasicBlock:       notionapi.BasicBlock{Type: notionapi.BlockTypeBulletedListItem},
+					BulletedListItem: notionapi.ListItem{RichText: newRichText("This month")},
 				},
 			},
 		},
 	}
 
-	block := &notionapi.Heading1Block{
+	block := &notionapi.Heading3Block{
 		BasicBlock: notionapi.BasicBlock{
 			Object:      "block",
 			ID:          "heading-id",
-			Type:        notionapi.BlockTypeHeading1,
+			Type:        notionapi.BlockTypeHeading3,
 			HasChildren: true,
 		},
-		Heading1: notionapi.Heading{
-			RichText:     newRichText("Expandable Section"),
+		Heading3: notionapi.Heading{
+			RichText:     newRichText("December 2, 2025"),
 			IsToggleable: true,
 		},
 	}
@@ -136,11 +162,9 @@ func TestToggleableHeadingWithChildren(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !strings.Contains(result, "[!faq]- Expandable Section") {
-		t.Errorf("expected toggleable heading title, got %q", result)
-	}
-	if !strings.Contains(result, "Hidden content under heading") {
-		t.Errorf("expected toggleable heading content, got %q", result)
+	expected := "### December 2, 2025\n\n- Retro\n- This month\n"
+	if result != expected {
+		t.Errorf("got %q, want %q", result, expected)
 	}
 }
 
