@@ -133,6 +133,19 @@ go fmt ./...
 golangci-lint run
 ```
 
+## Contributing
+
+This project uses a task-driven multi-agent development workflow. Tasks are tracked as markdown files in the `tasks/` directory:
+
+```
+tasks/
+├── backlog/      # Not yet started
+├── in-progress/  # Currently being worked on
+└── done/         # Completed and merged
+```
+
+All code changes go through pull requests. See `CLAUDE.md` for the full development workflow.
+
 ## License
 
 MIT
